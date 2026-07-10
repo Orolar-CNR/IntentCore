@@ -1,6 +1,6 @@
 # IntentCore Architecture Landscape
 
-IntentCore is a specification-driven intent coordination kernel, with AetherBus as its transport protocol, designed to enforce deterministic lifecycle control, admission governance, and state consistency for distributed autonomous systems.
+IntentCore is a specification-driven intent coordination kernel, with ABTP (AetherBus Transport Protocol) as its transport boundary, designed to enforce deterministic lifecycle control, admission governance, and state consistency for distributed autonomous systems.
 
 ## Architecture at a Glance
 
@@ -9,24 +9,30 @@ External Systems
         │
         ▼
 +----------------------+
-|     AetherBus        |
-| Transport Protocol   |
+|        ABTP          |
+|  Transport Boundary  |
 +----------------------+
-          │
-          ▼
+        │
+        ▼
++----------------------+
+|  SemanticEnvelope    |
+|   (Wire Contract)    |
++----------------------+
+        │
+        ▼
 +----------------------+
 |     IntentCore       |
 | Coordination Kernel  |
 +----------------------+
-│
-├── Validation
-├── Normalization
-├── Admission
-├── Lifecycle
-├── State Repository
-├── History
-├── Proof
-└── Telemetry
+        │
+        ├── Validation
+        ├── Normalization
+        ├── Admission
+        ├── Lifecycle
+        ├── State Repository
+        ├── History
+        ├── Proof
+        └── Telemetry
 ```
 
 ## 1. Architecture Boundaries
@@ -36,8 +42,8 @@ IntentCore is no longer a message broker in the traditional sense. It is the coo
 | Component | Responsibility | Architectural identity |
 | --- | --- | --- |
 | Repository / Project: IntentCore | Core kernel for lifecycle, state, admission, and coordination | Kernel |
-| Transport Protocol: AetherBus | Low-level transport that carries `SemanticEnvelope` into the kernel | Transport layer |
-| Wire Format: `SemanticEnvelope` | Canonical envelope format and metadata contract carried by AetherBus | Wire format |
+| Transport Protocol: ABTP | Low-level transport that carries `SemanticEnvelope` into the kernel | Transport boundary |
+| Wire Format: `SemanticEnvelope` | Canonical envelope format and metadata contract carried by ABTP | Wire format |
 | RFC | Frozen or approved implementation contract | Locked standard |
 | Architecture Family: IntentCore Architecture | Full architectural envelope governing structure, flow, and development rules | System architecture |
 
@@ -49,7 +55,7 @@ The canonical RFC mapping is:
 
 | RFC | Scope | Kernel responsibility |
 | --- | --- | --- |
-| RFC-0001 | Transport / Wire Protocol | Carries `SemanticEnvelope` into the kernel through AetherBus |
+| RFC-0001 | Transport / Wire Protocol | Carries `SemanticEnvelope` into the kernel through ABTP |
 | RFC-0002 | Admission | Defines the admission interface and decision boundary |
 | RFC-0003 | State Repository | Defines the single source of truth and repository mutation primitives |
 | RFC-0004 | Lifecycle | Defines lifecycle states, transitions, authority, and history |
@@ -170,25 +176,19 @@ The system obeys a one-way pipeline only:
 ```text
 External Systems
     ↓
-AetherBus
+ABTP
     ↓
 SemanticEnvelope
     ↓
-Validation
-    ↓
-Normalization
-    ↓
-Admission
-    ↓
-Lifecycle
-    ↓
-State Repository
-    ↓
-History
-    ↓
-Proof
-    ↓
-Telemetry
+IntentCore
+    ├── Validation
+    ├── Normalization
+    ├── Admission
+    ├── Lifecycle
+    ├── State Repository
+    ├── History
+    ├── Proof
+    └── Telemetry
 ```
 
 No layer is allowed to mutate a lower or unrelated layer directly.
@@ -213,8 +213,8 @@ The system originally lived under the AetherBus name, where the transport and me
 The rebrand from AetherBus-Tachyon to IntentCore is therefore not only a rename. It is a change in architectural identity:
 
 - IntentCore is now the repository and architecture name.
-- AetherBus remains the transport protocol name.
-- `SemanticEnvelope` is the wire format carried by AetherBus.
+- ABTP remains the transport protocol name.
+- `SemanticEnvelope` is the wire format carried by ABTP.
 - RFC documents are the locked contracts for implementation behavior.
 - Legacy references to broker-centric framing are historical only.
 
@@ -245,7 +245,7 @@ IntentCore/
 └── README.md
 ```
 
-In this structure, AetherBus is an implementation of the transport layer inside IntentCore. It is not the architectural center of the system.
+In this structure, ABTP is an implementation of the transport layer for IntentCore. It is not the architectural center of the system.
 
 ## 8. Current State Summary
 
@@ -262,4 +262,4 @@ The project is now structurally stable.
 
 ## 9. One-line Definition
 
-IntentCore is a specification-driven intent coordination kernel that uses AetherBus as its transport protocol to provide deterministic lifecycle control, admission governance, repository-backed state consistency, and proof-oriented coordination for distributed autonomous systems.
+IntentCore is a specification-driven intent coordination kernel that uses ABTP as its transport boundary to provide deterministic lifecycle control, admission governance, repository-backed state consistency, and proof-oriented coordination for distributed autonomous systems.

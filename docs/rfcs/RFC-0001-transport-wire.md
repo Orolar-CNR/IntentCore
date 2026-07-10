@@ -5,7 +5,7 @@ Authors: IntentCore Architecture Team
 Created: 2026-07-10
 Updated: 2026-07-10
 Dependencies: RFC-0000
-Implements: IntentCore transport boundary via AetherBus
+Implements: IntentCore transport boundary via ABTP
 
 1. Abstract
 
@@ -31,7 +31,7 @@ This RFC does not define admission policy, lifecycle transitions, repository int
 4. Terminology
 
 SemanticEnvelope
-The canonical transport object carried by AetherBus into IntentCore.
+The canonical transport object carried by ABTP into IntentCore.
 
 Wire Contract
 The immutable field set, ordering, and semantics used for transport interoperability.
@@ -47,13 +47,13 @@ Deterministic transformation of an envelope into canonical form without altering
 The transport flow is:
 
 External Systems
-  → AetherBus
+  → ABTP
   → SemanticEnvelope
-  → Validation
-  → Normalization
+  → IntentCore Validation
+  → IntentCore Normalization
   → IntentCore Admission
 
-AetherBus is a transport protocol only. It MUST NOT contain business logic, lifecycle logic, or state mutation logic.
+ABTP is a transport protocol only. It MUST NOT contain business logic, lifecycle logic, or state mutation logic.
 
 6. Canonical Wire Contract
 
@@ -134,6 +134,7 @@ The following invariants MUST hold:
 - Transport MUST NOT change lifecycle state.
 - The same "envelope_id" MUST map to the same logical message identity.
 - A rejected envelope MUST remain rejected regardless of transport retries unless explicitly re-submitted.
+- IntentCore MUST remain independent from any specific transport implementation.
 
 10. Compatibility
 
