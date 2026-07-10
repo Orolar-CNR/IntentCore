@@ -56,7 +56,7 @@ The canonical RFC mapping is:
 
 Runtime command and execution-level contracts are not core RFCs in this kernel layer. Those concerns belong above IntentCore in runtime or execution components.
 
-### ADR-0001 — Broker Internal Architecture
+### ADR-0001 — IntentCore Internal Architecture
 
 **Status:** Approved
 
@@ -111,7 +111,7 @@ Defines:
 
 **Status:** Complete
 
-`core/` is the shared dictionary and type-safety layer of the system.
+`core/` provides the shared contracts, identity types, common abstractions, and type-safe foundations used across the entire kernel.
 
 Key elements:
 
@@ -161,21 +161,34 @@ Pending:
 - `recovery.go`
 - `health.go`
 
+These components are implementation work only. They do not introduce new architectural contracts.
+
 ## 4. Internal Data Flow
 
 The system obeys a one-way pipeline only:
 
 ```text
+External Systems
+    ↓
+AetherBus
+    ↓
 SemanticEnvelope
-  → AetherBus Transport
-  → Validation
-  → Normalization
-  → Admission
-  → Lifecycle / StateMachine
-  → State Repository (CAS)
-  → History
-  → Proof
-  → Telemetry
+    ↓
+Validation
+    ↓
+Normalization
+    ↓
+Admission
+    ↓
+Lifecycle
+    ↓
+State Repository
+    ↓
+History
+    ↓
+Proof
+    ↓
+Telemetry
 ```
 
 No layer is allowed to mutate a lower or unrelated layer directly.
@@ -238,6 +251,8 @@ In this structure, AetherBus is an implementation of the transport layer inside 
 
 The project is now structurally stable.
 
+- Core Contracts: complete and frozen
+- Repository API: stable
 - Core: complete
 - Lifecycle: complete
 - State Repository: in progress
@@ -247,4 +262,4 @@ The project is now structurally stable.
 
 ## 9. One-line Definition
 
-IntentCore is a frozen-contract intent coordination kernel with AetherBus transport, deterministic lifecycle control, strict admission governance, and repository-backed state consistency for distributed autonomous systems.
+IntentCore is a specification-driven intent coordination kernel that uses AetherBus as its transport protocol to provide deterministic lifecycle control, admission governance, repository-backed state consistency, and proof-oriented coordination for distributed autonomous systems.
