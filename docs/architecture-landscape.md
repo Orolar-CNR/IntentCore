@@ -267,87 +267,158 @@ No outer layer may mutate inner state.
 
 ---
 
-# Evolution Roadmap
+# IntentCore Roadmap — Phase 0: Specification & Blueprint
 
-The architecture evolves through four logical stages.
+## วัตถุประสงค์
 
-## Stage 1 — Foundation
+Phase นี้มุ่งเน้นการสร้าง **สัญญาสถาปัตยกรรม (Architectural Contracts)** และ Blueprint ที่มั่นคง ก่อนเริ่มพัฒนาโค้ดจริง โดยยึดหลัก **Specification First** เพื่อให้การพัฒนาในระยะต่อไปเป็นไปอย่างสอดคล้องและตรวจสอบได้
 
-Focus:
+## Stage 1 — Core Architectural Contracts
 
-- RFCs
-- Contracts
-- Core Packages
+**เป้าหมาย**
+กำหนดขอบเขตของระบบให้สมบูรณ์และไม่คลุมเครือ
+
+**งานที่ต้องดำเนินการ**
+- `RFC-0000` — Architectural Principles
+- `RFC-0001` — SemanticEnvelope
+- `RFC-0002` — Admission Boundary
+- `RFC-0003` — State Repository
+- `RFC-0004` — Lifecycle Control
+
+**ผลลัพธ์**
+- Stable Core Contracts
+- Frozen Public Interfaces
+- Canonical Architecture
+- Dependency Direction ถูกกำหนดอย่างถาวร
+
+## Stage 2 — Repository Blueprint
+
+**เป้าหมาย**
+กำหนดพฤติกรรมของระบบจัดเก็บข้อมูลระยะยาว
+
+**งานที่ต้องดำเนินการ**
+- Snapshot Strategy
+- Incremental Snapshot
+- Recovery Procedure
+- Ledger Compaction
+- Archive Strategy
+- Retention Policy
+
+**ผลลัพธ์**
+Repository สามารถ:
+- Recover ได้
+- Scale ได้
+- Audit ได้
+- รองรับ Append-only Ledger ระยะยาว
+
+## Stage 3 — Transport Blueprint (ABTP)
+
+**เป้าหมาย**
+กำหนดขอบเขตของ Transport อย่างสมบูรณ์
+
+**งานที่ต้องดำเนินการ**
+- Transport Pipeline
+- Decoder
+- Encoder
+- Version Negotiation
+- Frame Validation
+- Checksum
+- Packet Drop Rules
+- Malformed Envelope Handling
+- Transport Error Model
+
+**สิ่งที่ "ไม่อยู่" ใน ABTP**
+- Policy
 - Lifecycle
+- State Mutation
 - Repository
+- Governance
+- Semantic Evaluation
 
-Goal:
+**ผลลัพธ์**
+ABTP กลายเป็น Pure Transport Boundary อย่างแท้จริง
 
-Create a deterministic coordination kernel.
+## Stage 4 — Governance Blueprint
+
+**เป้าหมาย**
+สร้างระบบกำกับดูแลที่พิสูจน์ได้
+
+**งานที่ต้องดำเนินการ**
+- Policy Language
+- Logic Linter
+- Decidability Checking
+- Authorization
+- Trust Evaluation
+- Credential Validation
+
+**ผลลัพธ์**
+Admission Layer สามารถรับประกันว่า:
+- Policy ไม่มี Infinite Loop
+- Policy วิเคราะห์จบได้
+- Governance ตรวจสอบย้อนหลังได้
 
 ---
 
-## Stage 2 — Expansion
+# สิ่งที่ยังไม่ทำใน Phase นี้
 
-Focus:
+เพื่อรักษาขอบเขตของโครงการ สิ่งต่อไปนี้จะยังไม่อยู่ใน Phase 0:
+- Network Optimization
+- eBPF
+- XDP
+- AF_XDP
+- DPDK
+- RDMA
+- NUMA Scheduling
+- Zero-copy Optimization
 
+**เหตุผลคือ:**
+สิ่งเหล่านี้เป็น **Implementation Technology** ไม่ใช่ **Architectural Contract** จึงควรเกิดหลังจาก RFC ถูกล็อก, Wire Protocol ถูกล็อก, และ Transport Contract ถูกล็อก
+
+---
+
+# หลังจาก Phase 0
+
+เมื่อ Blueprint สมบูรณ์แล้ว จึงเข้าสู่ **Phase 1: Implementation**
+
+```text
+Core Package
+    ↓
+Lifecycle
+    ↓
+Repository
+    ↓
+Transport
+    ↓
+Telemetry
+    ↓
+Testing
+```
+
+จากนั้นจึงเข้าสู่ **Phase 2: Distributed Expansion** เช่น:
 - Semantic Routing
-- Intent Discovery
-- Policy Engine
-- Distributed Telemetry
-
-Goal:
-
-Expand coordination beyond a single runtime.
-
----
-
-## Stage 3 — Transformation
-
-Focus:
-
-- Multi-Agent Federation
+- Agent Discovery
+- Federation
 - Intent Graph
-- Adaptive Governance
-- Trust Infrastructure
-
-Goal:
-
-Coordinate distributed autonomous agents.
-
----
-
-## Stage 4 — Vision
-
-Focus:
-
-- Global Intent Coordination
+- Distributed Scheduling
 - Knowledge Plane
-- Self-Optimizing Infrastructure
-- Intent-Centric Computing
-
-Goal:
-
-Provide an open coordination infrastructure for autonomous systems.
 
 ---
 
-# Architectural Principles
+# Architectural Principles (RFC-0000)
 
-IntentCore follows these principles:
-
+RFC-0000 จะไม่อธิบาย API หรือโปรโตคอล แต่จะอธิบาย "กฎสูงสุด" ที่ RFC ทุกฉบับต้องปฏิบัติตาม เช่น:
 - Intent First
+- Specification First
+- One-Way Dependency
+- Separation of Concerns
 - Transport Independence
 - Deterministic Lifecycle
 - Single Source of Truth
 - Immutable History
-- Separation of Concerns
-- Strict Module Ownership
-- One-Way Dependency
 - Governance Before Execution
 - Observability by Design
 
----
+ข้อดีคือ เมื่อโครงการขยายไปเป็น RFC-0010, RFC-0020 หรือมากกว่านั้น ทุกเอกสารจะยังยึดหลักการเดียวกัน และช่วยป้องกันการออกแบบที่เบี่ยงเบนจากสถาปัตยกรรมหลักโดยไม่ตั้งใจ
 
 # Summary
 
@@ -356,30 +427,3 @@ Document 1 defines the architecture.
 Document 2 defines the direction.
 
 Together they establish the complete evolution path of IntentCore—from a specification-driven coordination kernel to a distributed infrastructure for intent-aware autonomous systems.
-
-
-แผนการดำเนินงานระยะกำหนดสเปกและสถาปัตยกรรม (Specification & Blueprint Phase)
-ลำดับที่
-เป้าหมายหลัก
-องค์ประกอบที่ต้องดำเนินการ
-ผลลัพธ์เชิงสถาปัตยกรรม
-1
-ล็อกมาตรฐาน RFCs
-ร่างข้อกำหนดของ RFC-0001 ถึง RFC-0004 ให้เสร็จสมบูรณ์
-ได้สัญญากลางที่เสถียรสำหรับควบคุมพฤติกรรมการทำงานของระบบ
-2
-วางกลยุทธ์ Repository
-ระบุนโยบาย Snapshot และ Archiving ลงในเอกสาร Blueprint อย่างเป็นทางการ
-ป้องกันปัญหาคอขวดของหน่วยความจำจากโครงสร้างแบบ Append-only ledger
-3
-ออกแบบ ABTP Fallback
-นิยามกฎการระงับ (Drop) แพ็กเก็ต และแยกการตรวจสอบโปรโตคอลออกจากการประเมินตรรกะ
-ABTP ทำหน้าที่เป็นขอบเขตการขนส่งอย่างแท้จริง โดยไม่ปะปนกับตรรกะของระบบ
-4
-พัฒนาระบบ Governance
-วางโครงสร้าง Logic Linter ภายในขอบเขตการรับเข้า (Admission Boundary) (ดำเนินการภายหลัง)
-ป้องกันปัญหา Infinite loop ตามหลักการประเมินผลที่คำนวณสิ้นสุดได้ (Decidability)
-
-การวิเคราะห์ความสอดคล้องทางสถาปัตยกรรม
-การผลักเรื่อง eBPF/XDP ไว้เป็นเรื่องรอง: เป็นการตัดสินใจที่เฉียบขาดมากครับ แม้เทคโนโลยี eBPF และ XDP จะมีความสำคัญในการเร่งความเร็วการขนส่งข้อมูลแบบ Zero-copy และดึงข้อมูล Metadata ได้ตั้งแต่ก่อนเข้าสู่เคอร์เนล แต่มันก็ยังเป็นเพียงกลไกเบื้องหลังของ ABTP การล็อกสเปกของ SemanticEnvelope (RFC-0001) ให้แน่นเสียก่อน จะทำให้การออกแบบลอจิกการสกัดข้อมูลระดับเครือข่ายในภายหลังทำได้ง่ายและตรงจุดมากขึ้น
-ความสำคัญของการระบุ Snapshot ลงใน Blueprint ทันที: เนื่องจากสถานะของระบบถูกควบคุมผ่านกลไก Lifecycle และใช้ Repository เป็นแหล่งความจริงเพียงหนึ่งเดียวผ่านการบันทึกเหตุการณ์ต่อเนื่อง (Event Sourcing) การระบุกลยุทธ์การทำ Snapshot และ Recovery อย่างเป็นทางการ จะช่วยการันตีความสามารถในการฟื้นคืนระบบ (Failure Recovery) ได้อย่างรวดเร็วและสมบูรณ์แบบหากเกิดเหตุขัดข้อง
