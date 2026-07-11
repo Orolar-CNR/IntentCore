@@ -1,6 +1,6 @@
 RFC-0002: Intent Admission Interface
 
-Status: Frozen
+Status: Locked
 Authors: IntentCore Architecture Team
 Created: 2026-07-10
 Updated: 2026-07-10
