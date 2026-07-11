@@ -55,7 +55,19 @@ External Systems
 
 ABTP is a transport protocol only. It MUST NOT contain business logic, lifecycle logic, or state mutation logic.
 
-6. Canonical Wire Contract
+6. Canonical Wire Contract & Genesis Dependency
+
+The data structures and schemas utilized by IntentCore as its wire contract are strictly declarative and serve as a normative dependency, not a runtime coupling.
+
+6.1 Canonical Contract Conformance
+- IntentCore MUST validate wire data against the canonical contract published by AETHERIUM-GENESIS (RFC-0000).
+- IntentCore MUST NOT redefine or diverge from that canonical contract within the kernel boundary.
+
+6.2 Schema Artifacts and Equivalence
+- The structural definition of the "SemanticEnvelope" and related payloads is governed entirely by the civilization constitution (RFC-0000).
+- Any implementation-specific types in IntentCore (e.g., Go structs representing the envelope) MUST be generated from, or provably equivalent to, the canonical schema artifacts (such as JSON Schema, Protobuf, or OpenAPI definitions) exported by AETHERIUM-GENESIS.
+
+6.3 SemanticEnvelope Reference Fields
 
 The canonical envelope is "SemanticEnvelope". The following fields are part of the frozen wire contract.
 
@@ -76,16 +88,15 @@ Wire Contract Rules
 
 7. Validation Pipeline
 
-Validation is the first kernel-side step after transport ingestion.
+Validation is the strict boundary where untrusted input from the AetherBus is evaluated against the authoritative definitions of the civilization before entering the kernel state machine.
 
-7.1 Structural Validation
-
-The system MUST verify that:
-
-- all required fields are present
-- field types conform to the contract
-- envelope identity is structurally valid
-- payload encoding is parseable
+7.1 Structural Validation via Canonical Artifacts
+- The structural validator within IntentCore MUST evaluate the parsed payload against the shared schema artifacts provided by RFC-0000.
+- Input data MUST be rejected immediately if it violates any data contract constraint, including but not limited to:
+  * Missing or malformed 'envelope_id' (UUIDv4 validation)
+  * Missing 'agent_identity' or 'event_timestamp' (ISO 8601 compliance)
+  * Any violation of structural invariants enforced by the Genesis canonical schema.
+- Validation MUST act solely as a deterministic structural conformance check and MUST NOT inject business logic.
 
 7.2 Protocol Validation
 
@@ -103,6 +114,10 @@ If validation fails:
 - the failure SHOULD be recorded as telemetry
 - the envelope MAY be rejected with a structured error
 - the kernel MUST preserve the rejection reason for observability
+
+7.4 Schema Version Governance
+- Any schema version mismatch between the incoming SemanticEnvelope and the kernel's supported reference artifacts MUST result in immediate rejection before admission.
+- The rejection reason MUST explicitly log the version variance for system telemetry without executing any further parsing pipeline.
 
 8. Normalization Requirements
 
