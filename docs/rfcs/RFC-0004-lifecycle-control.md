@@ -1,6 +1,6 @@
 RFC-0004: Lifecycle Control / State Machine
 
-Status: Frozen
+Status: Locked
 Authors: IntentCore Architecture Team
 Created: 2026-07-10
 Updated: 2026-07-10
