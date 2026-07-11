@@ -1,179 +1,33 @@
 # Repository Blueprint
 
-**Status:** Draft
 **Phase:** Phase 0 — Specification & Blueprint
-**Related RFCs:**
-- RFC-0003 — State Repository
-- RFC-0004 — Lifecycle Control
+**Related RFCs:** RFC-0003 (State Repository), RFC-0004 (Lifecycle Control)
 
----
+## Purpose
+This blueprint defines the long-term storage strategy for IntentCore. It provides implementation guidance on persistence, recovery, snapshot management, and how the append-only ledger operates under the hood.
 
-# Purpose
+## Repository Architecture
+The Repository is expected to be built around an Event Sourcing model, utilizing an append-only ledger for all state mutations.
 
-This blueprint defines the long-term storage strategy for IntentCore.
-
-It extends RFC-0003 by describing implementation guidance for persistence, recovery, snapshot management, ledger maintenance, and scalability.
-
-This document is informative and does not define protocol contracts.
-
----
-
-# Scope
-
-This blueprint covers:
-
-- Repository architecture
-- Snapshot strategy
-- Recovery process
-- Ledger compaction
-- Archiving strategy
-- Retention policy
-- Repository scalability
-
-It does NOT define:
-
-- Lifecycle rules
-- Admission policy
-- Transport protocol
-- Wire format
-
----
-
-# Architectural Goals
-
-- Single Source of Truth
-- Immutable State History
-- Event Sourcing
-- Deterministic Recovery
-- Horizontal Scalability
-- Audit Completeness
-
----
-
-# Repository Architecture
-
-IntentCore Repository consists of:
-
-- State Store
-- Append-only Ledger
-- Snapshot Store
-- Archive Storage
-
-```
+```text
 Lifecycle
-        │
+        │ (CAS mutations)
         ▼
 Repository
-   ├── State
-   ├── Ledger
-   ├── Snapshot
-   └── Archive
+   ├── State Cache (In-Memory / Fast Access)
+   ├── Ledger (Append-only Immutable Log)
+   ├── Snapshot Store (Periodic checkpoints)
+   └── Archive (Cold storage for old ledgers)
 ```
 
----
+## Snapshot and Recovery Strategy
+Because an append-only ledger grows indefinitely, reading the entire ledger from genesis to rebuild state is impractical.
+The system is expected to perform periodic snapshots:
+1.  **Snapshotting:** The current aggregate state is serialized to a Snapshot Store at a specific Ledger Offset.
+2.  **Recovery:** On startup, the system loads the latest snapshot, then replays only the ledger events that occurred *after* the snapshot's offset.
 
-# Snapshot Strategy
+## Compaction and Archiving
+To manage disk space, older ledger segments that have been fully captured in a stable snapshot can be archived to cold storage (e.g., AWS S3, local tape backups). The active repository node only needs to retain the recent ledger segments necessary for immediate recovery and current CAS validation.
 
-Goals
-
-- Fast restart
-- Bounded recovery time
-- Reduced replay cost
-
-Possible policies
-
-- Periodic snapshot
-- Incremental snapshot
-- Manual snapshot
-- Automatic snapshot
-
-Snapshot metadata
-
-- Snapshot ID
-- Repository Version
-- Timestamp
-- Intent Count
-- Ledger Offset
-
----
-
-# Recovery Strategy
-
-Recovery pipeline
-
-```
-Snapshot
-      │
-      ▼
-Replay Ledger
-      │
-      ▼
-Rebuild State
-```
-
-Requirements
-
-- Deterministic
-- Replay-safe
-- Crash-safe
-
----
-
-# Ledger Management
-
-Ledger remains append-only.
-
-Maintenance includes:
-
-- Compaction
-- Archiving
-- Retention
-- Integrity verification
-
-Ledger entries MUST NEVER be modified.
-
----
-
-# Archiving Strategy
-
-Old ledger segments MAY be archived.
-
-Requirements:
-
-- Immutable
-- Verifiable
-- Recoverable
-
-Possible archive targets
-
-- Object Storage
-- Cold Storage
-- Remote Repository
-
----
-
-# Retention Policy
-
-Repository SHOULD define:
-
-- retention duration
-- archive threshold
-- snapshot interval
-- cleanup policy
-
----
-
-# Future Work
-
-- Distributed Repository
-- Multi-node Replication
-- Consensus Layer
-- Incremental Recovery
-- Remote Snapshots
-
----
-
-# References
-
-RFC-0003
-RFC-0004
+## Storage Independence
+The repository interface is designed to be agnostic to the underlying database engine. Implementations could utilize PostgreSQL, specialized event stores (like EventStoreDB), or highly optimized in-memory stores backed by WAL (Write-Ahead Logging), as long as they satisfy the CAS and immutability contracts of RFC-0003.

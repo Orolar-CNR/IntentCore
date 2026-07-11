@@ -1,56 +1,19 @@
 # Governance Blueprint
 
-**Status:** Draft
 **Phase:** Phase 0 — Specification & Blueprint
-**Related RFCs:**
-- RFC-0002 — Admission Boundary
+**Related RFCs:** RFC-0002 (Admission Boundary)
 
----
+## Purpose
+This blueprint describes the reference architecture for the IntentCore Governance and Admission layer. It illustrates how policy validation, trust evaluation, and logic verification are expected to be implemented.
 
-# Purpose
+## Governance Pipeline
+The Admission layer is expected to process intents through a sequential pipeline before they reach the Lifecycle engine:
 
-This blueprint defines implementation guidance for governance.
-
-It extends Admission by introducing policy validation, trust evaluation, and logic verification.
-
----
-
-# Scope
-
-Includes
-
-- Policy Language
-- Logic Linter
-- Trust Evaluation
-- Authorization
-- Identity Validation
-
-Excludes
-
-- Lifecycle
-- Repository
-- Transport
-- Routing
-
----
-
-# Architectural Goals
-
-- Decidability
-- Auditability
-- Explainability
-- Authorization
-- Trust
-
----
-
-# Governance Pipeline
-
-```
-Identity
+```text
+Identity Verification
       │
       ▼
-Authorization
+Authorization (RBAC/ABAC)
       │
       ▼
 Policy Validation
@@ -59,79 +22,22 @@ Policy Validation
 Trust Evaluation
       │
       ▼
-Admission
+Admission Decision (Accept/Reject)
 ```
 
----
+## Policy Language and Logic Linter
+To comply with the determinism required by RFC-0002, the policy engine is expected to use a restricted Domain Specific Language (DSL), such as a highly constrained subset of YAML, JSON, or Rego (Open Policy Agent).
 
-# Policy Language
+A Logic Linter is expected to run against all deployed policies to verify:
+*   Absence of unreachable rules.
+*   Absence of cyclic dependencies or recursion.
+*   Decidability (the policy will always evaluate to a conclusion in bounded time).
 
-Policy SHOULD be
+## Trust Model
+Trust evaluation is expected to be multi-dimensional. Instead of simple binary permissions, the system can consider:
+*   Historical performance of the agent.
+*   Cryptographic proof of identity (e.g., Verifiable Credentials).
+*   Contextual constraints (e.g., time of day, network origin).
 
-- deterministic
-- bounded
-- declarative
-- analyzable
-
-Policy MUST NOT support
-
-- recursion
-- arbitrary execution
-- infinite loops
-- unrestricted computation
-
----
-
-# Logic Linter
-
-The Logic Linter validates
-
-- unreachable rules
-- recursive rules
-- cyclic dependencies
-- conflicting policies
-- undecidable expressions
-
-The Linter MUST reject unsafe policies.
-
----
-
-# Trust Model
-
-Trust MAY include
-
-- Identity
-- Capability
-- Historical Performance
-- Reputation
-- Context
-
-Trust SHOULD be multi-dimensional.
-
----
-
-# Audit
-
-Every admission decision SHOULD generate
-
-- decision record
-- policy identifier
-- trust evidence
-- timestamp
-- verifier information
-
----
-
-# Future Work
-
-- Verifiable Credentials
-- DIDs
-- Proof System
-- Policy Compiler
-- Formal Verification
-
----
-
-# References
-
-RFC-0002
+## Audit and Telemetry
+When an admission decision is made (especially a rejection), the system is expected to generate a highly detailed audit record. This record forms the cryptographic evidence that the governance layer was not bypassed.

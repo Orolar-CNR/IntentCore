@@ -1,137 +1,37 @@
-# ABTP Transport Blueprint
+# Transport Blueprint
 
-**Status:** Draft
 **Phase:** Phase 0 — Specification & Blueprint
-**Related RFCs:**
-- RFC-0001 — SemanticEnvelope
+**Related RFCs:** RFC-0001 (Semantic Envelope)
 
----
+## Purpose
+This blueprint describes the implementation strategy for the transport boundary, specifically focusing on how high-performance technologies like eBPF and XDP are expected to be utilized without leaking into the core IntentCore logic.
 
-# Purpose
+## Transport Pipeline
+The transport layer's sole responsibility is delivering the `SemanticEnvelope` into the kernel space.
 
-This blueprint describes implementation guidance for the transport boundary.
-
-ABTP is responsible only for transporting SemanticEnvelope.
-
-It MUST remain independent from IntentCore runtime logic.
-
----
-
-# Scope
-
-Includes
-
-- Framing
-- Decoder
-- Encoder
-- Version negotiation
-- Checksum
-- Drop rules
-- Error handling
-
-Excludes
-
-- Admission
-- Lifecycle
-- Repository
-- Governance
-- Semantic evaluation
-
----
-
-# Architectural Goals
-
-- Pure Transport Boundary
-- Stateless Processing
-- High Throughput
-- Zero-copy Friendly
-- Transport Independence
-
----
-
-# Transport Pipeline
-
-```
-Socket
-    │
-    ▼
-Frame Validation
-    │
-    ▼
-Decoder
-    │
-    ▼
+```text
+Network Interface (NIC)
+        │
+        ▼
+XDP / eBPF (Hardware/Kernel space fast-path)
+        │ (Drops invalid packets instantly)
+        ▼
+AF_XDP Socket / Ring Buffer
+        │
+        ▼
+Go Userspace (Decoder / Deserializer)
+        │
+        ▼
 SemanticEnvelope
-    │
-    ▼
-IntentCore
+        │
+        ▼
+IntentCore Kernel (Validation Layer)
 ```
 
----
+## Hardware Acceleration (eBPF / XDP)
+IntentCore is designed for extreme throughput. The reference implementation uses eBPF (Extended Berkeley Packet Filter) and XDP (eXpress Data Path).
+*   **Early Drop:** Malformed packets, invalid magic bytes, or unsupported protocol versions are expected to be dropped directly in the Linux kernel network stack (or even on the NIC) before they consume userspace CPU cycles.
+*   **Zero-copy:** By utilizing AF_XDP, packet data can be shared directly with the Go userspace application, minimizing memory copies.
 
-# Validation
-
-Transport validates only
-
-- Magic Bytes
-- Version
-- Frame Length
-- Checksum
-- Binary Structure
-
-Transport MUST NOT validate
-
-- Intent semantics
-- Policy
-- Lifecycle
-- Trust
-- Authorization
-
----
-
-# Drop Rules
-
-Immediately drop:
-
-- invalid checksum
-- malformed frame
-- unsupported version
-- invalid magic bytes
-- oversized frame
-
----
-
-# Error Model
-
-Possible transport errors
-
-- Invalid Frame
-- Checksum Error
-- Decode Failure
-- Version Mismatch
-- Timeout
-
-Transport errors MUST NOT mutate repository state.
-
----
-
-# Future Optimizations
-
-Possible implementations
-
-- eBPF
-- XDP
-- AF_XDP
-- io_uring
-- DPDK
-- RDMA
-
-These are implementation technologies.
-
-They are NOT protocol requirements.
-
----
-
-# References
-
-RFC-0001
+## Protocol Independence
+While ABTP (AetherBus Transport Protocol) over UDP/XDP is the reference, the architecture strictly decouples transport from intent processing. The transport adapter in Go merely wraps the network I/O, ensuring that if a future implementation uses DPDK, RDMA, or standard TCP sockets, the core kernel remains completely untouched.

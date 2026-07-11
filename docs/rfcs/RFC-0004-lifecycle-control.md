@@ -1,225 +1,106 @@
-RFC-0004: Lifecycle Control / State Machine
+# RFC-0004 — Lifecycle Control
 
-Status: Locked
-Authors: IntentCore Architecture Team
-Created: 2026-07-10
-Updated: 2026-07-10
-Dependencies: RFC-0000, RFC-0001, RFC-0002, RFC-0003
-Implements: Lifecycle state machine for intent coordination
+**Status:** Locked
+**Category:** Architecture Specification
+**Version:** 1.0
+**Last Updated:** 2026-07-11
 
-1. Abstract
+## Abstract
 
-This RFC defines the canonical lifecycle state machine for IntentCore. It specifies the lifecycle states, valid transitions, transition authority, atomicity requirements, rollback model, retry semantics, and immutable transition history.
+This RFC defines the normative state machine and transition rules for the Lifecycle component. The Lifecycle component is the sole kernel-side authority for authorizing and coordinating state transitions for admitted Intents.
 
-2. Motivation
+## Motivation
 
-IntentCore requires a deterministic and enforceable lifecycle model so that every intent can move through the system under explicit authority and auditable rules. Lifecycle control must be isolated from transport, admission, and repository implementation details while remaining the only authorized path for state mutation.
+To maintain deterministic behavior, a single authority must govern how an Intent progresses from admission to completion or failure. If multiple components can trigger arbitrary state changes, the system loses its auditability and reasoning guarantees.
 
-3. Scope
+## Terminology
 
-This RFC defines:
+*   **Lifecycle Engine:** The core state machine coordinator.
+*   **State Transition:** The movement of an Intent from one recognized state to another.
+*   **Terminal State:** A state from which no further transitions are allowed.
 
-- lifecycle states
-- transition rules
-- transition authority
-- atomic state mutation requirements
-- rollback and retry semantics
-- immutable transition history
-- lifecycle-related invariants
+## Architectural Context
 
-This RFC does not define transport framing, admission policy internals, repository persistence mechanics, or proof construction semantics beyond lifecycle-facing history records.
+The Lifecycle engine receives accepted Intents from Admission, computes the required state transition, and attempts to commit the new state to the Repository via CAS.
+`Admission → Lifecycle → Repository`
 
-4. Terminology
+## Normative Specification
 
-Lifecycle State
-A canonical stage in the life of an intent.
+### 1. Sole Authority
+The Lifecycle component SHALL be the sole authority for state transitions. No other component (Transport, Validation, Admission) MAY authorize a state mutation.
 
-Transition
-A state change from one lifecycle state to another.
+### 2. Deterministic State Machine
+The Lifecycle MUST operate as a formal, deterministic state machine.
+*   All allowed transitions MUST be explicitly defined in a Transition Matrix.
+*   Any transition not explicitly allowed MUST be rejected.
 
-Authority
-The component or role allowed to authorize or trigger a specific transition.
+### 3. Allowed Transition Matrix
+The following transitions are ALLOWED:
+*   `Pending` → `Validated`
+*   `Validated` → `Admitted`
+*   `Admitted` → `Scheduled`
+*   `Scheduled` → `Executing`
+*   `Executing` → `Completed` (Terminal)
+*   `Executing` → `Failed`
+*   `Failed` → `RolledBack` (Terminal)
 
-Atomic Transition
-A state change that must occur all-or-nothing, without partial application.
-
-History Record
-An immutable audit record describing a completed transition.
-
-5. Lifecycle States
-
-The lifecycle consists of the following frozen states:
-
-1. "StateUnknown"
-2. "StatePending"
-3. "StateValidated"
-4. "StateAdmitted"
-5. "StateScheduled"
-6. "StateExecuting"
-7. "StateCompleted"
-8. "StateFailed"
-9. "StateRolledBack"
-
-"StateUnknown" is a non-operational sentinel and MUST NOT be treated as a valid runtime lifecycle position.
-
-6. Architecture
-
-Lifecycle is the sole authority for state mutation. It sits between admission and the state repository.
-
-IntentCore
-  → Admission
-  → Lifecycle StateMachine
-  → State Repository (CAS)
-  → History
-
-Lifecycle MUST be the only kernel-side component allowed to authorize and coordinate state transitions.
-
-7. Transition Rules
-
-The following transitions are allowed:
-
-- "StatePending" → "StateValidated"
-- "StateValidated" → "StateAdmitted"
-- "StateAdmitted" → "StateScheduled"
-- "StateScheduled" → "StateExecuting"
-- "StateExecuting" → "StateCompleted"
-- "StateExecuting" → "StateFailed"
-- "StateFailed" → "StateRolledBack"
-
-Forbidden transitions
-
-- "StateCompleted" → any state
-- "StateRolledBack" → any state
-- "StateUnknown" → operational states without initialization
-- any backward transition not explicitly listed above
-- any transition that bypasses authority checks or repository version checks
-
-8. Transition Authority
-
-Each transition MUST be authorized by the correct authority.
-
-Transition| Authority
-"StatePending" → "StateValidated"| Validation
-"StateValidated" → "StateAdmitted"| Admission
-"StateAdmitted" → "StateScheduled"| Scheduler
-"StateScheduled" → "StateExecuting"| Runtime
-"StateExecuting" → "StateCompleted"| Runtime
-"StateExecuting" → "StateFailed"| Runtime
-"StateFailed" → "StateRolledBack"| Rollback
-
-Requirements
-
-- Lifecycle MUST enforce authority before state mutation.
-- Unauthorized transitions MUST be rejected.
-- Authority checks MUST be explicit and deterministic.
-- Authority MUST NOT be inferred from transport details alone.
-- Authority MUST be represented as a stable contract, not a stringly-typed guess.
-
-9. Atomic Transition Requirements
-
+### 4. Atomic Transitions
 Transitions MUST be atomic.
+*   A transition MUST either complete fully or not happen at all.
+*   Partial state updates SHALL NOT be visible to any consumer.
+*   The Lifecycle engine MUST coordinate with repository CAS semantics to ensure atomicity.
 
-Requirements
+### 5. Invariants
+*   `Completed` and `RolledBack` states MUST be terminal.
+*   Transitions MUST NOT bypass authority checks.
 
-- A transition MUST either complete fully or not happen at all.
-- Partial state updates MUST NOT be visible.
-- Transition version checks MUST occur before commit.
-- The lifecycle engine SHOULD coordinate with repository CAS semantics.
-- Exclusive ownership of an intent SHOULD be enforced during mutation.
-- Retry-safe recovery MAY occur only after failure is fully resolved.
+## State Model
 
-10. Retry and Rollback Semantics
+The Formal State Model is a Directed Acyclic Graph (DAG) with cycles only permitted in strictly defined retry policies (which are out of scope for the base state machine).
+```
+Pending → Validated → Admitted → Scheduled → Executing → Completed
+                                                  ↓
+                                                Failed → RolledBack
+```
 
-Retry
+## Interfaces
 
-Retry semantics MAY be supported for failed intents where policy permits it.
+```go
+type Lifecycle interface {
+    Transition(ctx context.Context, intent core.IntentID, targetState State) error
+}
+```
 
-- Retry MUST NOT bypass authority or version rules.
-- Retry SHOULD be policy-controlled.
-- Retry MUST preserve auditability.
+## Error Model
 
-Rollback
+*   `ErrInvalidTransition`: Returned when attempting a transition not in the Allowed Matrix.
+*   `ErrTerminalState`: Returned when attempting to mutate a completed or rolled-back Intent.
 
-Rollback is the compensating path from failure to terminal rollback.
+## Security Considerations
 
-- Rollback MUST be explicit.
-- Rollback MUST be auditable.
-- Rollback MUST be idempotent where possible.
-- Rollback MUST NOT be treated as silent undo.
-- Rollback MUST preserve the history of the failure that triggered it.
+The deterministic state machine prevents attackers from forcing an Intent into an arbitrary state (e.g., jumping from `Pending` directly to `Completed` without passing `Admission`).
 
-11. Transition History
+## Observability
 
-Every transition MUST be recorded as an immutable history entry.
+Every state transition attempted by the Lifecycle MUST be recorded, including both successful commits and rejected transitions (due to CAS failures or matrix violations).
 
-History Requirements
+## Compliance Requirements
 
-- Each history record MUST include intent identity.
-- Each record MUST include previous and next state.
-- Each record MUST include transition authority.
-- Each record SHOULD include version before and after mutation.
-- Each record SHOULD include timestamp metadata.
-- History MUST be append-only from the perspective of consumers.
-- History MUST NOT be externally mutable after publication.
+| Requirement | RFC | Test |
+| :--- | :--- | :--- |
+| Enforce Allowed Transition Matrix | RFC-0004 | lifecycle_matrix_test.go |
+| Reject transitions from Terminal states | RFC-0004 | lifecycle_terminal_test.go |
+| Atomicity via Repository CAS | RFC-0004 | lifecycle_atomic_test.go |
 
-12. Invariants
+## Backward Compatibility
 
-The following invariants MUST hold:
+The state machine is frozen. Adding new states or transitions requires a new RFC revision. Implementations MAY evolve internally, but the external transition matrix contract MUST remain stable.
 
-- Only Lifecycle MAY authorize state transitions.
-- Only valid transitions MAY be committed.
-- Completed and RolledBack states are terminal.
-- Atomicity MUST prevent partial transition visibility.
-- Every transition MUST be traceable through history.
-- Repository version checks MUST be respected by lifecycle mutation.
-- Transition authority MUST match the permitted transition table.
+## Rationale
 
-13. Compatibility
+A strict Lifecycle state machine guarantees that the system's operational flow is mathematically verifiable and easy to reason about, which is critical for a high-assurance coordination kernel.
 
-This RFC is frozen. Future lifecycle evolution MUST preserve the state machine, authority model, and atomic transition semantics.
+## References
 
-Compatibility rules:
-
-- New states MUST require a new RFC revision.
-- New transitions MUST require a new RFC revision.
-- Transition authority MAY be refined only if backward compatibility is maintained.
-- The lifecycle engine implementation MAY evolve, but the contract MUST remain stable.
-
-14. Security Considerations
-
-Lifecycle control is a privileged boundary.
-
-The system SHOULD protect against:
-
-- unauthorized state mutation
-- replayed transition requests
-- stale version commits
-- cross-layer mutation bypass
-- concurrent transition races
-- malicious rollback attempts
-
-Lifecycle components MUST treat incoming requests as untrusted until authority and version rules are satisfied.
-
-15. Reference Implementation Notes
-
-A reference implementation MAY use:
-
-- a transition table
-- an authority checker
-- an atomic transition helper
-- an immutable history recorder
-
-The implementation MUST preserve the frozen contract even if internal mechanics differ.
-
-16. Future Work
-
-Future revisions MAY define:
-
-- richer retry policies
-- distributed intent locking
-- cross-shard transition coordination
-- state-machine event sourcing
-- more detailed failure categories
-- formal verification of transition properties
-
-These additions MUST preserve the frozen lifecycle contract defined by this RFC.
+*   RFC-0000 — Architectural Principles
+*   RFC-0003 — State Repository
