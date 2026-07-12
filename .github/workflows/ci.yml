@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Go CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+          cache: true
+
+      - name: Install eBPF dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev gcc-multilib
+
+      - name: Generate eBPF objects
+        run: go generate ./...
+
+      - name: Verify formatting
+        run: |
+          files=$(find . -name '*.go' -not -path './vendor/*' -not -path './.git/*')
+          if [ -n "$files" ]; then
+            bad=$(echo "$files" | xargs gofmt -l)
+            if [ -n "$bad" ]; then
+              echo "The following files are not gofmt'd:"
+              echo "$bad"
+              exit 1
+            fi
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test ./...

@@ -1,0 +1,39 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    paths:
+      - "README.md"
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-docs:
+    name: Validate documentation structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required docs exist
+        run: |
+          test -f README.md
+          test -f docs/architecture-landscape.md
+          test -f docs/rfcs/RFC-0000-architectural-principles.md
+          test -f docs/rfcs/RFC-0001-semantic-envelope.md
+          test -f docs/rfcs/RFC-0002-admission-boundary.md
+          test -f docs/rfcs/RFC-0003-state-repository.md
+          test -f docs/rfcs/RFC-0004-lifecycle-control.md
+
+      - name: List RFC files
+        run: |
+          echo "RFC files:"
+          find docs/rfcs -maxdepth 1 -type f | sort

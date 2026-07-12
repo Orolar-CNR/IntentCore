@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+          cache: true
+
+      - name: Install eBPF dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang llvm libbpf-dev gcc-multilib
+
+      - name: Generate eBPF objects
+        run: go generate ./...
+
+      - name: Verify formatting
+        run: |
+          files=$(find . -name '*.go' -not -path './vendor/*' -not -path './.git/*')
+          if [ -n "$files" ]; then
+            bad=$(echo "$files" | xargs gofmt -l)
+            if [ -n "$bad" ]; then
+              echo "The following files are not gofmt'd:"
+              echo "$bad"
+              exit 1
+            fi
+          fi
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build Linux amd64 binary
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/intentcore-linux-amd64 ./...
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: intentcore-linux-amd64
+          path: dist/intentcore-linux-amd64
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/intentcore-linux-amd64
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
