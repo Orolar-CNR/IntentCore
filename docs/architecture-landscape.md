@@ -1,429 +1,176 @@
-# IntentCore Architecture Landscape
+# IntentCore Architecture Landscape & Specification
 
-> This document provides the architectural landscape of IntentCore.
->
-> Document 1 defines the stable architectural foundation.
-> Document 2 defines the long-term architectural vision.
->
-> Together they describe the evolution path from a specification-driven
-> coordination kernel into a distributed intent coordination infrastructure.
+**Version:** 1.0.0
+**Status:** Active / Normative
+**Category:** Architectural Blueprint
+**One-line Definition:** IntentCore is a transport-agnostic intent coordination kernel enforcing deterministic lifecycle management, state consistency, and proof-oriented governance for distributed autonomous systems.
 
 ---
 
-# Architecture Philosophy
+## 1. Executive Summary
 
-IntentCore is **not a message broker**, **not a workflow engine**, and **not a transport protocol**.
+This document specifies the normative architecture of the IntentCore system. IntentCore SHALL operate exclusively as an intent coordination kernel. Its explicit mandate is to govern validated intent admission, enforce deterministic lifecycle control, execute authoritative state mutations, and maintain immutable records of system history, cryptographic proofs, and telemetry.
 
-IntentCore is an **Intent Coordination Kernel**.
+The system MUST remain strictly decoupled from transport-layer mechanics. The AetherBus Transport Protocol (ABTP) MUST serve strictly as a stateless transport boundary, whose sole responsibility is the ingestion and delivery of the canonical `SemanticEnvelope` into the kernel runtime.
 
-Its responsibility is to coordinate, validate, govern, and maintain the lifecycle of Intent while remaining independent from transport implementations.
+## 2. Architectural Constitution (Invariants)
 
-The architecture follows one fundamental principle:
+This section serves as the supreme normative constitution of the system. All components, modules, and future extensions MUST comply with the following invariants, utilizing terminology defined in IETF RFC 2119.
 
-> Every state mutation must originate from a validated Intent.
+1. **State Mutation:** Every authoritative state mutation MUST originate exclusively from a fully validated and admitted Intent.
+2. **Transport Statelessness:** Transport mechanisms MUST be stateless. The transport boundary MUST NOT execute lifecycle decisions, policy evaluations, or state mutations.
+3. **Transport Agnosticism:** The IntentCore kernel MUST be strictly transport-agnostic. All external data ingestion MUST cross the boundary via the ABTP interface.
+4. **Single Source of Truth:** The Repository MUST remain the singular authoritative source of truth. Mutations MUST utilize a Compare-And-Swap (CAS) mechanism to guarantee concurrency safety.
+5. **Immutable History:** The system history MUST be an append-only ledger. Data MUST NOT be overwritten, deleted, or altered.
+6. **Strict One-Way Dependency:** Execution pipelines MUST flow unidirectionally. Outer layers MUST NOT bypass intermediate stages or directly modify inner state.
 
-Nothing inside the system is allowed to modify state directly.
+## 3. System Boundaries & Terminology
 
----
+To prevent structural drift and ambiguity, the architecture locks the following terminology and boundaries:
 
-# Two-Layer Architecture
+* **IntentCore (Coordination Kernel):** The central computational engine responsible exclusively for intent lifecycle, policy enforcement, and state governance.
+* **ABTP (Transport Boundary):** The protocol layer responsible only for framing, checksum validation, serialization, and network I/O.
+* **SemanticEnvelope (Wire Contract):** The canonical data structure and mandatory format for all external communication entering the kernel.
+* **RFC (Frozen Contract):** Normative, immutable rules that all implementations MUST conform to.
+* **ADR (Internal Rule):** Architecture Decision Records documenting the engineering rationale behind internal implementations.
 
-The project is intentionally described using two complementary documents.
+## 4. Execution Flow
 
-## Layer 1 — Architectural Foundation
+The system MUST enforce a strict, unidirectional execution pipeline to guarantee architectural integrity.
 
-(Document 1)
+**Pipeline Flow:**
+`External Systems ──> ABTP ──> SemanticEnvelope ──> Validation/Normalization ──> Admission ──> Lifecycle ──> Repository (State/History/Proof/Telemetry)`
 
-This layer establishes the immutable architectural contracts.
+### 4.1 Strict One-Way Dependency Diagram
 
-Its purpose is to answer:
+```mermaid
+graph TD
+    Ext[External Systems / Agents] -->|Raw Bytes| ABTP
 
-- What is Intent?
-- What is Transport?
-- What is Admission?
-- What is Lifecycle?
-- What is State?
-- What is Governance?
-- How are these components related?
+    subgraph IntentCore_Kernel [IntentCore Kernel Boundary]
+        ABTP[Transport Boundary: ABTP] -->|Framing & Serialization| Env[Wire Contract: SemanticEnvelope]
+        Env -->|Canonical Format| Val[Validation & Normalization]
+        Val -->|Normalized Intent| Adm[Admission / Policy Enforcement]
+        Adm -->|Admitted Intent| Life[Lifecycle Control]
+        Life -->|State Transition| Repo[(Repository: Single Source of Truth)]
+        Repo -->|Events| Hist[History / Proof / Telemetry]
+    end
 
-The outcome of this layer is a stable architecture suitable for RFCs and production implementation.
-
-Core characteristics include:
-
-- Intent as the execution primitive
-- ABTP as transport boundary
-- SemanticEnvelope as canonical wire format
-- Deterministic lifecycle
-- Single Source of Truth
-- Immutable history
-- Strict dependency direction
-- Separation of concerns
-
-This layer defines **how the system is built**.
-
----
-
-## Layer 2 — Architectural Vision
-
-(Document 2)
-
-The second document extends the foundation toward future distributed systems.
-
-It answers a different question:
-
-> What should IntentCore eventually become?
-
-Instead of redefining the architecture, it expands its capabilities.
-
-Future capabilities include:
-
-- Semantic Routing
-- Distributed Coordination
-- Multi-Agent Governance
-- Trust Infrastructure
-- Knowledge Plane
-- Intent Discovery
-- Adaptive Coordination
-- Global Observability
-
-This layer defines **where the architecture is heading**.
-
----
-
-# Relationship Between Both Documents
-
-The two documents are not alternatives.
-
-They represent different abstraction levels.
-
-```
-Document 1
-    │
-    │ establishes
-    ▼
-
-Architecture Foundation
-    │
-    │ enables
-    ▼
-
-Document 2
-    │
-    │ expands
-    ▼
-
-Distributed Intent Infrastructure
+    style Ext fill:#f9f,stroke:#333,stroke-width:2px
+    style Repo fill:#ff9,stroke:#333,stroke-width:2px
+    style IntentCore_Kernel fill:#f4f4f4,stroke:#666,stroke-width:2px,stroke-dasharray: 5 5
 ```
 
-Document 1 provides architectural stability.
+### 4.2 Deterministic Lifecycle State Machine
 
-Document 2 provides architectural evolution.
-
----
-
-# Core Architectural Components
-
-## Intent
-
-Intent is the fundamental semantic primitive.
-
-It expresses desired outcomes instead of execution procedures.
-
-Intent is the only object allowed to initiate state transitions.
-
----
-
-## Transport Boundary (ABTP)
-
-ABTP is responsible only for transporting data.
-
-Responsibilities include:
-
-- framing
-- serialization
-- checksum
-- protocol validation
-- version negotiation
-
-ABTP never performs:
-
-- lifecycle decisions
-- policy evaluation
-- state mutation
-- governance logic
-
-Transport remains completely independent from the coordination kernel.
-
----
-
-## SemanticEnvelope
-
-SemanticEnvelope is the canonical wire contract.
-
-Every external system communicates with IntentCore using SemanticEnvelope.
-
-It guarantees:
-
-- interoperability
-- deterministic parsing
-- stable wire compatibility
-
----
-
-## Admission
-
-Admission evaluates whether an Intent is allowed to enter the system.
-
-Responsibilities include:
-
-- schema validation
-- identity verification
-- authorization
-- policy enforcement
-- trust evaluation
-
-Admission does not mutate system state.
-
----
-
-## Lifecycle
-
-Lifecycle is the only authority allowed to perform state transitions.
-
-Every transition must be:
-
-- deterministic
-- atomic
-- auditable
-
-Transition rules are defined by RFC-0004.
-
----
-
-## Repository
-
-Repository acts as the Single Source of Truth.
-
-It guarantees:
-
-- Compare-And-Swap
-- Version control
-- Snapshot
-- Recovery
-- Immutable state history
-
----
-
-## History / Proof / Telemetry
-
-Every transition generates evidence.
-
-The system maintains:
-
-- audit history
-- proof records
-- telemetry events
-- distributed tracing
-
-Observability is considered a first-class architectural component.
-
----
-
-# Dependency Direction
-
-IntentCore enforces a strict one-way dependency model.
-
-```
-External Systems
-        │
-        ▼
-      ABTP
-        │
-        ▼
-SemanticEnvelope
-        │
-        ▼
- Validation
-        │
-        ▼
-Normalization
-        │
-        ▼
- Admission
-        │
-        ▼
- Lifecycle
-        │
-        ▼
- Repository
-        │
-        ▼
-History / Proof / Telemetry
+```mermaid
+stateDiagram-v2
+    [*] --> SUBMITTED : Received via ABTP
+    SUBMITTED --> VALIDATED : Syntax & Schema Check Pass
+    SUBMITTED --> REJECTED : Syntax Error / Malformed
+    VALIDATED --> ADMITTED : Policy & Identity Check Pass
+    VALIDATED --> REJECTED : Policy Check Fail / Unauthorized
+    ADMITTED --> EXECUTING : Handed to Dispatcher
+    EXECUTING --> COMPLETED : Intent Fulfilled (CAS Success)
+    EXECUTING --> FAILED : Execution Error / State Conflict
+    COMPLETED --> [*]
+    FAILED --> [*]
+    REJECTED --> [*]
 ```
 
-No component may bypass another layer.
+## 5. Contract Mapping
 
-No outer layer may mutate inner state.
+The architecture relies on Dependency Inversion. Implementations MUST adhere to the following interface contracts.
 
----
+**contracts/intent.go** (Core Semantic Primitive)
+```go
+package contracts
 
-# IntentCore Roadmap — Phase 0: Specification & Blueprint
+// Intent expresses a desired outcome rather than an execution procedure.
+// Implementations MUST ensure that an Intent remains immutable once created.
+type Intent interface {
+	ID() string
+	Type() string
+	Issuer() string
+	Payload() []byte
+}
 
-## วัตถุประสงค์
-
-Phase นี้มุ่งเน้นการสร้าง **สัญญาสถาปัตยกรรม (Architectural Contracts)** และ Blueprint ที่มั่นคง ก่อนเริ่มพัฒนาโค้ดจริง โดยยึดหลัก **Specification First** เพื่อให้การพัฒนาในระยะต่อไปเป็นไปอย่างสอดคล้องและตรวจสอบได้
-
-## Stage 1 — Core Architectural Contracts
-
-**เป้าหมาย**
-กำหนดขอบเขตของระบบให้สมบูรณ์และไม่คลุมเครือ
-
-**งานที่ต้องดำเนินการ**
-- `RFC-0000` — Architectural Principles (กฎสูงสุดของทั้งชุด RFC)
-- `RFC-0001` — SemanticEnvelope
-- `RFC-0002` — Admission Boundary
-- `RFC-0003` — State Repository
-- `RFC-0004` — Lifecycle Control
-
-**ผลลัพธ์**
-- Stable Core Contracts
-- Frozen Public Interfaces
-- Canonical Architecture
-- Dependency Direction ถูกกำหนดอย่างถาวร
-
-## Stage 2 — Repository Blueprint
-
-**เป้าหมาย**
-กำหนดพฤติกรรมของระบบจัดเก็บข้อมูลระยะยาว
-
-**งานที่ต้องดำเนินการ**
-- Snapshot Strategy
-- Incremental Snapshot
-- Recovery Procedure
-- Ledger Compaction
-- Archive Strategy
-- Retention Policy
-
-**ผลลัพธ์**
-Repository สามารถ:
-- Recover ได้
-- Scale ได้
-- Audit ได้
-- รองรับ Append-only Ledger ระยะยาว
-
-## Stage 3 — Transport Blueprint (ABTP)
-
-**เป้าหมาย**
-กำหนดขอบเขตของ Transport อย่างสมบูรณ์
-
-**งานที่ต้องดำเนินการ**
-- Transport Pipeline
-- Decoder
-- Encoder
-- Version Negotiation
-- Frame Validation
-- Checksum
-- Packet Drop Rules
-- Malformed Envelope Handling
-- Transport Error Model
-
-**สิ่งที่ "ไม่อยู่" ใน ABTP**
-- Policy
-- Lifecycle
-- State Mutation
-- Repository
-- Governance
-- Semantic Evaluation
-
-**ผลลัพธ์**
-ABTP กลายเป็น Pure Transport Boundary อย่างแท้จริง
-
-## Stage 4 — Governance Blueprint
-
-**เป้าหมาย**
-สร้างระบบกำกับดูแลที่พิสูจน์ได้
-
-**งานที่ต้องดำเนินการ**
-- Policy Language
-- Logic Linter
-- Decidability Checking
-- Authorization
-- Trust Evaluation
-- Credential Validation
-
-**ผลลัพธ์**
-Admission Layer สามารถรับประกันว่า:
-- Policy ไม่มี Infinite Loop
-- Policy วิเคราะห์จบได้
-- Governance ตรวจสอบย้อนหลังได้
-
----
-
-# สิ่งที่ยังไม่ทำใน Phase นี้
-
-เพื่อรักษาขอบเขตของโครงการ สิ่งต่อไปนี้จะยังไม่อยู่ใน Phase 0:
-- Network Optimization
-- eBPF
-- XDP
-- AF_XDP
-- DPDK
-- RDMA
-- NUMA Scheduling
-- Zero-copy Optimization
-
-**เหตุผลคือ:**
-สิ่งเหล่านี้เป็นเพียง **Implementation Technology** ไม่ใช่ **Architectural Contract** การนำเข้ามาพิจารณาในระยะนี้อาจทำให้เกิดการเบี่ยงเบนทางสถาปัตยกรรม (Architectural Drift) ได้ จึงต้องผลักการตัดสินใจเหล่านี้ไปกระทำหลังจากที่ RFC, Wire Protocol, และ Transport Contract ถูกล็อกอย่างสมบูรณ์แล้วเท่านั้น
-
----
-
-# หลังจาก Phase 0
-
-เมื่อ Blueprint สมบูรณ์แล้ว จึงเข้าสู่ **Phase 1: Implementation**
-
-```text
-Core Package
-    ↓
-Lifecycle
-    ↓
-Repository
-    ↓
-Transport
-    ↓
-Telemetry
-    ↓
-Testing
+// AdmittedIntent represents an Intent that has successfully passed Admission.
+// Only AdmittedIntents SHALL be processed by the Lifecycle.
+type AdmittedIntent interface {
+	Intent
+	AdmittedAt() int64
+	PolicyVersion() string
+}
 ```
 
-จากนั้นจึงเข้าสู่ **Phase 2: Distributed Expansion** เช่น:
-- Semantic Routing
-- Agent Discovery
-- Federation
-- Intent Graph
-- Distributed Scheduling
-- Knowledge Plane
+**contracts/envelope.go** (Canonical Wire Contract)
+```go
+package contracts
 
----
+// SemanticEnvelope is the canonical wire contract.
+// Every external system MUST communicate with the kernel utilizing this structure.
+type SemanticEnvelope struct {
+	Version   string
+	Signature []byte
+	Intent    Intent
+}
+```
 
-# Architectural Principles (RFC-0000)
+**contracts/admission.go** (Screening Boundary)
+```go
+package contracts
 
-RFC-0000 จะไม่อธิบาย API หรือโปรโตคอล แต่จะอธิบาย "กฎสูงสุด" (Supreme Rule) ของทั้งชุด RFC ที่ทุกฉบับต้องปฏิบัติตามอย่างเคร่งครัด เช่น:
-- Intent First
-- Specification First
-- One-Way Dependency
-- Separation of Concerns
-- Transport Independence
-- Deterministic Lifecycle
-- Single Source of Truth
-- Immutable History
-- Governance Before Execution
-- Observability by Design
+import "context"
 
-ข้อดีคือ เมื่อโครงการขยายไปเป็น RFC-0010, RFC-0020 หรือมากกว่านั้น ทุกเอกสารจะยังยึดหลักการเดียวกัน และช่วยป้องกันการออกแบบที่เบี่ยงเบนจากสถาปัตยกรรมหลักโดยไม่ตั้งใจ
+// AdmissionController serves as the strict gateway into the Lifecycle phase.
+// Implementations MUST NOT mutate authoritative system state.
+type AdmissionController interface {
+	Validate(ctx context.Context, env *SemanticEnvelope) error
+	Evaluate(ctx context.Context, env *SemanticEnvelope) (AdmittedIntent, error)
+}
+```
 
-# Summary
+**contracts/lifecycle.go** (Lifecycle Management)
+```go
+package contracts
 
-Document 1 defines the architecture.
+import "context"
 
-Document 2 defines the direction.
+// LifecycleMachine is the sole authority permitted to perform state transitions.
+type LifecycleMachine interface {
+	Transition(ctx context.Context, intent AdmittedIntent) (State, error)
+	CurrentState(intentID string) (State, error)
+}
+```
 
-Together they establish the complete evolution path of IntentCore—from a specification-driven coordination kernel to a distributed infrastructure for intent-aware autonomous systems.
+**contracts/repository.go** (Append-only & CAS Persistence)
+```go
+package contracts
+
+import "context"
+
+// Repository acts as the Single Source of Truth.
+// Outer layers MUST interact with the repository exclusively through these methods.
+type Repository interface {
+	Load(ctx context.Context, key string) ([]byte, uint64, error)
+	CompareAndSwap(ctx context.Context, key string, oldValue, newValue []byte, version uint64) (uint64, error)
+	AppendHistory(ctx context.Context, intentID string, transitionData []byte) error
+}
+```
+
+## 6. Non-Goals
+
+To maintain focus and system integrity, the following operations are strictly out of scope:
+* **NOT a Message Broker:** The system SHALL NOT act as a generic pub/sub router or arbitrary message fan-out engine.
+* **NOT a Workflow Engine:** The system SHALL NOT coordinate long-running distributed sagas with arbitrary external side-effects outside of its defined intent lifecycle.
+* **NOT a Transport Protocol:** The kernel SHALL NOT natively handle low-level network packets, sockets, or TCP/UDP handshakes.
+
+## 7. Implementation Roadmap & Phases
+
+*(Note: This section defines the sequential execution plan and exists outside the normative constraints of the architecture specification).*
+
+* **Phase 1 — Foundation:** Establishment of frozen RFCs, core contract packages, deterministic lifecycle engine, and CAS-based repository.
+* **Phase 2 — Expansion:** Implementation of semantic routing, intent discovery, policy engine integrations, and distributed telemetry.
+* **Phase 3 — Transformation:** Introduction of multi-agent federation capabilities, intent graph processing, and zero-trust infrastructure.
+* **Phase 4 — Vision:** Global intent coordination, knowledge plane integration, and the realization of a self-optimizing infrastructure.
