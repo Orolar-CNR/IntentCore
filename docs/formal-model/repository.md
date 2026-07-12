@@ -1,3 +1,5 @@
+**Related RFCs:** RFC-0000 (Architectural Principles)
+
 # Formal Model: Repository
 
 This document outlines the formal model for the IntentCore State Repository, ensuring single-source-of-truth and CAS (Compare-And-Swap) consistency.
@@ -8,18 +10,15 @@ $R_t : ID \to (State, \mathbb{N})$
 
 ## Operations
 
-### Compare And Swap (CAS)
-Given an Intent $id$, an expected version $v_{exp}$, and a new state $s_{new}$:
-
-```text
+### 1. Compare-And-Swap (CAS)
+```
 CAS(id, v_exp, s_new):
-    if R[id].version == v_exp:
-        R[id].state = s_new
-        R[id].version = v_exp + 1
-        History.Append(id, v_exp, s_new)
+    if R_t(id).Version == v_exp:
+        R_{t+1}(id) = (s_new, v_exp + 1)
+        History.Append(id, s_new, v_exp + 1)
         return SUCCESS
     else:
-        return FAILURE(VERSION_CONFLICT)
+        return CONFLICT
 ```
 
 ## Consistency Invariants

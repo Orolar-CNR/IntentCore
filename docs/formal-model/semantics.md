@@ -1,3 +1,5 @@
+**Related RFCs:** RFC-0000 (Architectural Principles)
+
 # Formal Model: Semantics & Validation
 
 This document outlines the formal model for structural validation of the Semantic Envelope.

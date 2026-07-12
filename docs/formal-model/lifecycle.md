@@ -1,3 +1,5 @@
+**Related RFCs:** RFC-0000 (Architectural Principles)
+
 # Formal Model: Lifecycle
 
 This document defines the formal mathematical model for the IntentCore Lifecycle State Machine, suitable for translation into formal verification languages like TLA+ or Alloy.

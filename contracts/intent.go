@@ -2,8 +2,6 @@ package contracts
 
 import (
 	"time"
-
-	"github.com/Orolar-CNR/IntentCore/core"
 )
 
 // IntentState represents the current state of an Intent in the lifecycle.
@@ -27,7 +25,7 @@ const (
 // IntentRecord represents the canonical form of an intent as stored in the Repository.
 // It bundles the SemanticEnvelope data with its current Lifecycle state and version.
 type IntentRecord struct {
-	ID        core.IntentID
+	ID        IntentID
 	Agent     string
 	Timestamp time.Time
 	Payload   []byte // JSON encoded opaque payload
@@ -40,7 +38,7 @@ type IntentRecord struct {
 // This interface defines how the system interacts with an intent internally.
 type Intent interface {
 	// ID returns the unique identifier of the intent.
-	ID() core.IntentID
+	ID() IntentID
 	// Agent returns the identity of the sender.
 	Agent() string
 	// Timestamp returns the logical event time.
