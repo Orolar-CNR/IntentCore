@@ -1,265 +1,429 @@
 # IntentCore Architecture Landscape
 
-IntentCore is a specification-driven intent coordination kernel, with ABTP (AetherBus Transport Protocol) as its transport boundary, designed to enforce deterministic lifecycle control, admission governance, and state consistency for distributed autonomous systems.
+> This document provides the architectural landscape of IntentCore.
+>
+> Document 1 defines the stable architectural foundation.
+> Document 2 defines the long-term architectural vision.
+>
+> Together they describe the evolution path from a specification-driven
+> coordination kernel into a distributed intent coordination infrastructure.
 
-## Architecture at a Glance
+---
 
-```text
-External Systems
-        │
-        ▼
-+----------------------+
-|        ABTP          |
-|  Transport Boundary  |
-+----------------------+
-        │
-        ▼
-+----------------------+
-|  SemanticEnvelope    |
-|   (Wire Contract)    |
-+----------------------+
-        │
-        ▼
-+----------------------+
-|     IntentCore       |
-| Coordination Kernel  |
-+----------------------+
-        │
-        ├── Validation
-        ├── Normalization
-        ├── Admission
-        ├── Lifecycle
-        ├── State Repository
-        ├── History
-        ├── Proof
-        └── Telemetry
+# Architecture Philosophy
+
+IntentCore is **not a message broker**, **not a workflow engine**, and **not a transport protocol**.
+
+IntentCore is an **Intent Coordination Kernel**.
+
+Its responsibility is to coordinate, validate, govern, and maintain the lifecycle of Intent while remaining independent from transport implementations.
+
+The architecture follows one fundamental principle:
+
+> Every state mutation must originate from a validated Intent.
+
+Nothing inside the system is allowed to modify state directly.
+
+---
+
+# Two-Layer Architecture
+
+The project is intentionally described using two complementary documents.
+
+## Layer 1 — Architectural Foundation
+
+(Document 1)
+
+This layer establishes the immutable architectural contracts.
+
+Its purpose is to answer:
+
+- What is Intent?
+- What is Transport?
+- What is Admission?
+- What is Lifecycle?
+- What is State?
+- What is Governance?
+- How are these components related?
+
+The outcome of this layer is a stable architecture suitable for RFCs and production implementation.
+
+Core characteristics include:
+
+- Intent as the execution primitive
+- ABTP as transport boundary
+- SemanticEnvelope as canonical wire format
+- Deterministic lifecycle
+- Single Source of Truth
+- Immutable history
+- Strict dependency direction
+- Separation of concerns
+
+This layer defines **how the system is built**.
+
+---
+
+## Layer 2 — Architectural Vision
+
+(Document 2)
+
+The second document extends the foundation toward future distributed systems.
+
+It answers a different question:
+
+> What should IntentCore eventually become?
+
+Instead of redefining the architecture, it expands its capabilities.
+
+Future capabilities include:
+
+- Semantic Routing
+- Distributed Coordination
+- Multi-Agent Governance
+- Trust Infrastructure
+- Knowledge Plane
+- Intent Discovery
+- Adaptive Coordination
+- Global Observability
+
+This layer defines **where the architecture is heading**.
+
+---
+
+# Relationship Between Both Documents
+
+The two documents are not alternatives.
+
+They represent different abstraction levels.
+
+```
+Document 1
+    │
+    │ establishes
+    ▼
+
+Architecture Foundation
+    │
+    │ enables
+    ▼
+
+Document 2
+    │
+    │ expands
+    ▼
+
+Distributed Intent Infrastructure
 ```
 
-## 1. Architecture Boundaries
+Document 1 provides architectural stability.
 
-IntentCore is no longer a message broker in the traditional sense. It is the coordination kernel that governs intent lifecycle, state mutation, authority, and proof-oriented coordination.
+Document 2 provides architectural evolution.
 
-| Component | Responsibility | Architectural identity |
-| --- | --- | --- |
-| Repository / Project: IntentCore | Core kernel for lifecycle, state, admission, and coordination | Kernel |
-| Transport Protocol: ABTP | Low-level transport that carries `SemanticEnvelope` into the kernel | Transport boundary |
-| Wire Format: `SemanticEnvelope` | Canonical envelope format and metadata contract carried by ABTP | Wire format |
-| RFC | Frozen or approved implementation contract | Locked standard |
-| Architecture Family: IntentCore Architecture | Full architectural envelope governing structure, flow, and development rules | System architecture |
+---
 
-## 2. Core Contracts
+# Core Architectural Components
 
-The architectural contracts below are frozen or approved and form the stable foundation of the system.
+## Intent
 
-The canonical RFC mapping is:
+Intent is the fundamental semantic primitive.
 
-| RFC | Scope | Kernel responsibility |
-| --- | --- | --- |
-| RFC-0001 | Transport / Wire Protocol | Carries `SemanticEnvelope` into the kernel through ABTP |
-| RFC-0002 | Admission | Defines the admission interface and decision boundary |
-| RFC-0003 | State Repository | Defines the single source of truth and repository mutation primitives |
-| RFC-0004 | Lifecycle | Defines lifecycle states, transitions, authority, and history |
+It expresses desired outcomes instead of execution procedures.
 
-Runtime command and execution-level contracts are not core RFCs in this kernel layer. Those concerns belong above IntentCore in runtime or execution components.
+Intent is the only object allowed to initiate state transitions.
 
-### ADR-0001 — IntentCore Internal Architecture
+---
 
-**Status:** Approved
+## Transport Boundary (ABTP)
 
-Defines internal development rules:
+ABTP is responsible only for transporting data.
 
-- Interface-first design
-- Single-direction pipeline
-- Strict module ownership
-- No layer crossing
-- Event-driven flow
-- Specification-driven implementation
+Responsibilities include:
 
-### RFC-0001 — Transport & Wire Protocol
+- framing
+- serialization
+- checksum
+- protocol validation
+- version negotiation
 
-**Status:** Frozen
+ABTP never performs:
 
-Defines `SemanticEnvelope`, validation, normalization, and wire-level constraints.
+- lifecycle decisions
+- policy evaluation
+- state mutation
+- governance logic
 
-### RFC-0002 — Intent Admission Interface
+Transport remains completely independent from the coordination kernel.
 
-**Status:** Frozen
+---
 
-Defines `AdmissionPolicy` and the admission decision boundary before execution.
+## SemanticEnvelope
 
-### RFC-0003 — State Topology / State Repository
+SemanticEnvelope is the canonical wire contract.
 
-**Status:** Frozen
+Every external system communicates with IntentCore using SemanticEnvelope.
 
-Defines the repository as the single source of truth, including:
+It guarantees:
 
-- `CompareAndSwap`
-- `CommitmentLedger`
-- `Snapshot`
-- `Recovery`
-- `StateVersion`
+- interoperability
+- deterministic parsing
+- stable wire compatibility
 
-### RFC-0004 — Lifecycle Control / State Machine
+---
 
-**Status:** Frozen
+## Admission
 
-Defines:
+Admission evaluates whether an Intent is allowed to enter the system.
 
-- the 8-state lifecycle
-- transition table
-- authority enforcement
-- atomic transitions
-- immutable history
+Responsibilities include:
 
-## 3. Implementation Status
+- schema validation
+- identity verification
+- authorization
+- policy enforcement
+- trust evaluation
 
-### Phase A — Core Contracts
+Admission does not mutate system state.
 
-**Status:** Complete
+---
 
-`core/` provides the shared contracts, identity types, common abstractions, and type-safe foundations used across the entire kernel.
+## Lifecycle
 
-Key elements:
+Lifecycle is the only authority allowed to perform state transitions.
 
-- `IDGenerator`
-- `IntentID`, `TraceID`, `TransitionID`, `NodeID`
-- `CommitmentState`
-- `StateVersion`
-- `TransitionRequest`, `TransitionResult`, `TransitionRecord`
-- `BrokerError` and error codes
-- `BrokerContext`
-- `Clock`, `Event`, and runtime abstractions
+Every transition must be:
 
-### Phase B — Lifecycle Module
+- deterministic
+- atomic
+- auditable
 
-**Status:** Complete
+Transition rules are defined by RFC-0004.
 
-`lifecycle/` is the central authority for state mutation.
+---
 
-Key elements:
+## Repository
 
-- `StateMachine`
-- transition rules
-- authority enforcement
-- atomic transition handling
-- immutable transition history
+Repository acts as the Single Source of Truth.
 
-### Phase C — State Repository
+It guarantees:
 
-**Status:** In progress
+- Compare-And-Swap
+- Version control
+- Snapshot
+- Recovery
+- Immutable state history
 
-`state/` is the memory and truth layer of the system.
+---
 
-Implemented:
+## History / Proof / Telemetry
 
-- `StateRepository` interface
-- thread-safe `InMemoryRepository`
-- `CompareAndSwap` as the only mutation primitive
-- copy-in / copy-out protection
-- context-aware operations
-- clock injection
+Every transition generates evidence.
 
-Pending:
+The system maintains:
 
-- `ledger.go`
-- `version.go`
-- `snapshot.go`
-- `recovery.go`
-- `health.go`
+- audit history
+- proof records
+- telemetry events
+- distributed tracing
 
-These components are implementation work only. They do not introduce new architectural contracts.
+Observability is considered a first-class architectural component.
 
-## 4. Internal Data Flow
+---
 
-The system obeys a one-way pipeline only:
+# Dependency Direction
 
-```text
+IntentCore enforces a strict one-way dependency model.
+
+```
 External Systems
-    ↓
-ABTP
-    ↓
+        │
+        ▼
+      ABTP
+        │
+        ▼
 SemanticEnvelope
-    ↓
-IntentCore
-    ├── Validation
-    ├── Normalization
-    ├── Admission
-    ├── Lifecycle
-    ├── State Repository
-    ├── History
-    ├── Proof
-    └── Telemetry
+        │
+        ▼
+ Validation
+        │
+        ▼
+Normalization
+        │
+        ▼
+ Admission
+        │
+        ▼
+ Lifecycle
+        │
+        ▼
+ Repository
+        │
+        ▼
+History / Proof / Telemetry
 ```
 
-No layer is allowed to mutate a lower or unrelated layer directly.
+No component may bypass another layer.
 
-## 5. Architectural Principles
+No outer layer may mutate inner state.
 
-IntentCore is built on the following principles:
+---
 
-- Simple contract in the middle
-- Evolution at the edges
-- No business logic in transport
-- State mutation only through the lifecycle engine
-- Repository as the single source of truth
-- Immutable history for auditability
-- Frozen contracts for stability
-- Specification-driven development as the default development model
+# IntentCore Roadmap — Phase 0: Specification & Blueprint
 
-## 6. Historical Context
+## วัตถุประสงค์
 
-The system originally lived under the AetherBus name, where the transport and message-routing idea first took shape. As the architecture matured, the project was re-centered around the actual responsibility of the kernel: intent coordination, lifecycle control, and state governance.
+Phase นี้มุ่งเน้นการสร้าง **สัญญาสถาปัตยกรรม (Architectural Contracts)** และ Blueprint ที่มั่นคง ก่อนเริ่มพัฒนาโค้ดจริง โดยยึดหลัก **Specification First** เพื่อให้การพัฒนาในระยะต่อไปเป็นไปอย่างสอดคล้องและตรวจสอบได้
 
-The rebrand from AetherBus-Tachyon to IntentCore is therefore not only a rename. It is a change in architectural identity:
+## Stage 1 — Core Architectural Contracts
 
-- IntentCore is now the repository and architecture name.
-- ABTP remains the transport protocol name.
-- `SemanticEnvelope` is the wire format carried by ABTP.
-- RFC documents are the locked contracts for implementation behavior.
-- Legacy references to broker-centric framing are historical only.
+**เป้าหมาย**
+กำหนดขอบเขตของระบบให้สมบูรณ์และไม่คลุมเครือ
 
-This naming model follows separation of concerns and supports the specification-driven architecture model used across ADRs, RFCs, and package boundaries.
+**งานที่ต้องดำเนินการ**
+- `RFC-0000` — Architectural Principles (กฎสูงสุดของทั้งชุด RFC)
+- `RFC-0001` — SemanticEnvelope
+- `RFC-0002` — Admission Boundary
+- `RFC-0003` — State Repository
+- `RFC-0004` — Lifecycle Control
 
-## 7. Target Package Structure
+**ผลลัพธ์**
+- Stable Core Contracts
+- Frozen Public Interfaces
+- Canonical Architecture
+- Dependency Direction ถูกกำหนดอย่างถาวร
 
-The long-term repository shape should make the separation visible in the filesystem:
+## Stage 2 — Repository Blueprint
+
+**เป้าหมาย**
+กำหนดพฤติกรรมของระบบจัดเก็บข้อมูลระยะยาว
+
+**งานที่ต้องดำเนินการ**
+- Snapshot Strategy
+- Incremental Snapshot
+- Recovery Procedure
+- Ledger Compaction
+- Archive Strategy
+- Retention Policy
+
+**ผลลัพธ์**
+Repository สามารถ:
+- Recover ได้
+- Scale ได้
+- Audit ได้
+- รองรับ Append-only Ledger ระยะยาว
+
+## Stage 3 — Transport Blueprint (ABTP)
+
+**เป้าหมาย**
+กำหนดขอบเขตของ Transport อย่างสมบูรณ์
+
+**งานที่ต้องดำเนินการ**
+- Transport Pipeline
+- Decoder
+- Encoder
+- Version Negotiation
+- Frame Validation
+- Checksum
+- Packet Drop Rules
+- Malformed Envelope Handling
+- Transport Error Model
+
+**สิ่งที่ "ไม่อยู่" ใน ABTP**
+- Policy
+- Lifecycle
+- State Mutation
+- Repository
+- Governance
+- Semantic Evaluation
+
+**ผลลัพธ์**
+ABTP กลายเป็น Pure Transport Boundary อย่างแท้จริง
+
+## Stage 4 — Governance Blueprint
+
+**เป้าหมาย**
+สร้างระบบกำกับดูแลที่พิสูจน์ได้
+
+**งานที่ต้องดำเนินการ**
+- Policy Language
+- Logic Linter
+- Decidability Checking
+- Authorization
+- Trust Evaluation
+- Credential Validation
+
+**ผลลัพธ์**
+Admission Layer สามารถรับประกันว่า:
+- Policy ไม่มี Infinite Loop
+- Policy วิเคราะห์จบได้
+- Governance ตรวจสอบย้อนหลังได้
+
+---
+
+# สิ่งที่ยังไม่ทำใน Phase นี้
+
+เพื่อรักษาขอบเขตของโครงการ สิ่งต่อไปนี้จะยังไม่อยู่ใน Phase 0:
+- Network Optimization
+- eBPF
+- XDP
+- AF_XDP
+- DPDK
+- RDMA
+- NUMA Scheduling
+- Zero-copy Optimization
+
+**เหตุผลคือ:**
+สิ่งเหล่านี้เป็นเพียง **Implementation Technology** ไม่ใช่ **Architectural Contract** การนำเข้ามาพิจารณาในระยะนี้อาจทำให้เกิดการเบี่ยงเบนทางสถาปัตยกรรม (Architectural Drift) ได้ จึงต้องผลักการตัดสินใจเหล่านี้ไปกระทำหลังจากที่ RFC, Wire Protocol, และ Transport Contract ถูกล็อกอย่างสมบูรณ์แล้วเท่านั้น
+
+---
+
+# หลังจาก Phase 0
+
+เมื่อ Blueprint สมบูรณ์แล้ว จึงเข้าสู่ **Phase 1: Implementation**
 
 ```text
-IntentCore/
-│
-├── core/
-├── lifecycle/
-├── admission/
-├── state/
-├── proof/
-├── history/
-├── telemetry/
-├── runtime/
-├── transport/
-│   └── aetherbus/
-│
-├── docs/
-│   ├── adr/
-│   └── rfc/
-│
-└── README.md
+Core Package
+    ↓
+Lifecycle
+    ↓
+Repository
+    ↓
+Transport
+    ↓
+Telemetry
+    ↓
+Testing
 ```
 
-In this structure, ABTP is an implementation of the transport layer for IntentCore. It is not the architectural center of the system.
+จากนั้นจึงเข้าสู่ **Phase 2: Distributed Expansion** เช่น:
+- Semantic Routing
+- Agent Discovery
+- Federation
+- Intent Graph
+- Distributed Scheduling
+- Knowledge Plane
 
-## 8. Current State Summary
+---
 
-The project is now structurally stable.
+# Architectural Principles (RFC-0000)
 
-- Core Contracts: complete and frozen
-- Repository API: stable
-- Core: complete
-- Lifecycle: complete
-- State Repository: in progress
-- Architecture contracts: frozen
-- Development model: specification-driven
-- Next phase: finish `state/`, then build `runtime/pipeline`
+RFC-0000 จะไม่อธิบาย API หรือโปรโตคอล แต่จะอธิบาย "กฎสูงสุด" (Supreme Rule) ของทั้งชุด RFC ที่ทุกฉบับต้องปฏิบัติตามอย่างเคร่งครัด เช่น:
+- Intent First
+- Specification First
+- One-Way Dependency
+- Separation of Concerns
+- Transport Independence
+- Deterministic Lifecycle
+- Single Source of Truth
+- Immutable History
+- Governance Before Execution
+- Observability by Design
 
-## 9. One-line Definition
+ข้อดีคือ เมื่อโครงการขยายไปเป็น RFC-0010, RFC-0020 หรือมากกว่านั้น ทุกเอกสารจะยังยึดหลักการเดียวกัน และช่วยป้องกันการออกแบบที่เบี่ยงเบนจากสถาปัตยกรรมหลักโดยไม่ตั้งใจ
 
-IntentCore is a specification-driven intent coordination kernel that uses ABTP as its transport boundary to provide deterministic lifecycle control, admission governance, repository-backed state consistency, and proof-oriented coordination for distributed autonomous systems.
+# Summary
+
+Document 1 defines the architecture.
+
+Document 2 defines the direction.
+
+Together they establish the complete evolution path of IntentCore—from a specification-driven coordination kernel to a distributed infrastructure for intent-aware autonomous systems.
