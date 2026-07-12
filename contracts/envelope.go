@@ -2,8 +2,6 @@ package contracts
 
 import (
 	"time"
-
-	"github.com/Orolar-CNR/IntentCore/core"
 )
 
 // SemanticEnvelope represents the canonical wire contract.
@@ -18,7 +16,7 @@ import (
 //   - Must contain an ISO8601 EventTimestamp
 //   - Must contain a JSON encoded OpaquePayload
 type SemanticEnvelope struct {
-	EnvelopeID     core.IntentID
+	EnvelopeID     IntentID
 	AgentIdentity  string
 	EventTimestamp time.Time
 	TelemetryClass string
