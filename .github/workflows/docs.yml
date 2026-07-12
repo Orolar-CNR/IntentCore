@@ -27,6 +27,7 @@ jobs:
         run: |
           test -f README.md
           test -f docs/architecture-landscape.md
+          test -f docs/rfcs/RFC-0000-architectural-principles.md
           test -f docs/rfcs/RFC-0001-transport-wire.md
           test -f docs/rfcs/RFC-0002-admission-interface.md
           test -f docs/rfcs/RFC-0003-state-topology.md
