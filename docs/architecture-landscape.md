@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-This document specifies the normative architecture of the IntentCore system. IntentCore SHALL operate exclusively as an intent coordination kernel. Its explicit mandate is to govern validated intent admission, enforce deterministic lifecycle control, execute authoritative state mutations, and maintain immutable records of system history, cryptographic proofs, and telemetry.
+This document specifies the normative architecture of the IntentCore system. IntentCore (IC) SHALL operate exclusively as an intent coordination kernel. Its explicit mandate is to govern validated intent admission, enforce deterministic lifecycle control, execute authoritative state mutations, and maintain immutable records of system history, cryptographic proofs, and telemetry.
 
 The system MUST remain strictly decoupled from transport-layer mechanics. The AetherBus Transport Protocol (ABTP) MUST serve strictly as a stateless transport boundary, whose sole responsibility is the ingestion and delivery of the canonical `SemanticEnvelope` into the kernel runtime.
 
@@ -19,7 +19,7 @@ This section serves as the supreme normative constitution of the system. All com
 
 1. **State Mutation:** Every authoritative state mutation MUST originate exclusively from a fully validated and admitted Intent.
 2. **Transport Statelessness:** Transport mechanisms MUST be stateless. The transport boundary MUST NOT execute lifecycle decisions, policy evaluations, or state mutations.
-3. **Transport Agnosticism:** The IntentCore kernel MUST be strictly transport-agnostic. All external data ingestion MUST cross the boundary via the ABTP interface.
+3. **Transport Agnosticism:** The IC kernel MUST be strictly transport-agnostic. All external data ingestion MUST cross the boundary via the ABTP interface.
 4. **Single Source of Truth:** The Repository MUST remain the singular authoritative source of truth. Mutations MUST utilize a Compare-And-Swap (CAS) mechanism to guarantee concurrency safety.
 5. **Immutable History:** The system history MUST be an append-only ledger. Data MUST NOT be overwritten, deleted, or altered.
 6. **Strict One-Way Dependency:** Execution pipelines MUST flow unidirectionally. Outer layers MUST NOT bypass intermediate stages or directly modify inner state.
@@ -30,7 +30,7 @@ To prevent structural drift and ambiguity, the architecture locks the following 
 
 * **IntentCore (Coordination Kernel):** The central computational engine responsible exclusively for intent lifecycle, policy enforcement, and state governance.
 * **ABTP (Transport Boundary):** The protocol layer responsible only for framing, checksum validation, serialization, and network I/O.
-* **SemanticEnvelope (Wire Contract):** The canonical data structure and mandatory format for all external communication entering the kernel.
+* **SemanticEnvelope (Wire Contract):** The canonical data structure and mandatory format for all external communication entering the IC kernel.
 * **RFC (Frozen Contract):** Normative, immutable rules that all implementations MUST conform to.
 * **ADR (Internal Rule):** Architecture Decision Records documenting the engineering rationale behind internal implementations.
 
@@ -47,7 +47,7 @@ The system MUST enforce a strict, unidirectional execution pipeline to guarantee
 graph TD
     Ext[External Systems / Agents] -->|Raw Bytes| ABTP
 
-    subgraph IntentCore_Kernel [IntentCore Kernel Boundary]
+    subgraph IC_Kernel [IntentCore Kernel Boundary]
         ABTP[Transport Boundary: ABTP] -->|Framing & Serialization| Env[Wire Contract: SemanticEnvelope]
         Env -->|Canonical Format| Val[Validation & Normalization]
         Val -->|Normalized Intent| Adm[Admission / Policy Enforcement]
@@ -58,24 +58,28 @@ graph TD
 
     style Ext fill:#f9f,stroke:#333,stroke-width:2px
     style Repo fill:#ff9,stroke:#333,stroke-width:2px
-    style IntentCore_Kernel fill:#f4f4f4,stroke:#666,stroke-width:2px,stroke-dasharray: 5 5
+    style IC_Kernel fill:#f4f4f4,stroke:#666,stroke-width:2px,stroke-dasharray: 5 5
 ```
 
 ### 4.2 Deterministic Lifecycle State Machine
 
+(Note: `StateUnknown` acts exclusively as an uninitialized sentinel value, with `Pending` representing the initial operational state).
+
 ```mermaid
 stateDiagram-v2
-    [*] --> SUBMITTED : Received via ABTP
-    SUBMITTED --> VALIDATED : Syntax & Schema Check Pass
-    SUBMITTED --> REJECTED : Syntax Error / Malformed
-    VALIDATED --> ADMITTED : Policy & Identity Check Pass
-    VALIDATED --> REJECTED : Policy Check Fail / Unauthorized
-    ADMITTED --> EXECUTING : Handed to Dispatcher
-    EXECUTING --> COMPLETED : Intent Fulfilled (CAS Success)
-    EXECUTING --> FAILED : Execution Error / State Conflict
-    COMPLETED --> [*]
-    FAILED --> [*]
-    REJECTED --> [*]
+    [*] --> Pending : Received via ABTP
+    Pending --> Validated : Syntax & Schema Check Pass
+    Pending --> Rejected : Syntax Error / Malformed
+    Validated --> Admitted : Policy & Identity Check Pass
+    Validated --> Rejected : Policy Check Fail / Unauthorized
+    Admitted --> Scheduled : Handed to Dispatcher
+    Scheduled --> Executing : Intent Processing
+    Executing --> Completed : Intent Fulfilled (CAS Success)
+    Executing --> Failed : Execution Error / State Conflict
+    Completed --> [*]
+    Failed --> RolledBack : Error Remediation
+    RolledBack --> [*]
+    Rejected --> [*]
 ```
 
 ## 5. Contract Mapping
@@ -164,13 +168,4 @@ type Repository interface {
 To maintain focus and system integrity, the following operations are strictly out of scope:
 * **NOT a Message Broker:** The system SHALL NOT act as a generic pub/sub router or arbitrary message fan-out engine.
 * **NOT a Workflow Engine:** The system SHALL NOT coordinate long-running distributed sagas with arbitrary external side-effects outside of its defined intent lifecycle.
-* **NOT a Transport Protocol:** The kernel SHALL NOT natively handle low-level network packets, sockets, or TCP/UDP handshakes.
-
-## 7. Implementation Roadmap & Phases
-
-*(Note: This section defines the sequential execution plan and exists outside the normative constraints of the architecture specification).*
-
-* **Phase 1 — Foundation:** Establishment of frozen RFCs, core contract packages, deterministic lifecycle engine, and CAS-based repository.
-* **Phase 2 — Expansion:** Implementation of semantic routing, intent discovery, policy engine integrations, and distributed telemetry.
-* **Phase 3 — Transformation:** Introduction of multi-agent federation capabilities, intent graph processing, and zero-trust infrastructure.
-* **Phase 4 — Vision:** Global intent coordination, knowledge plane integration, and the realization of a self-optimizing infrastructure.
+* **NOT a Transport Protocol:** The IC kernel SHALL NOT natively handle low-level network packets, sockets, or TCP/UDP handshakes.
