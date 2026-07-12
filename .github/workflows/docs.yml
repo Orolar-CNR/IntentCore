@@ -28,9 +28,9 @@ jobs:
           test -f README.md
           test -f docs/architecture-landscape.md
           test -f docs/rfcs/RFC-0000-architectural-principles.md
-          test -f docs/rfcs/RFC-0001-transport-wire.md
-          test -f docs/rfcs/RFC-0002-admission-interface.md
-          test -f docs/rfcs/RFC-0003-state-topology.md
+          test -f docs/rfcs/RFC-0001-semantic-envelope.md
+          test -f docs/rfcs/RFC-0002-admission-boundary.md
+          test -f docs/rfcs/RFC-0003-state-repository.md
           test -f docs/rfcs/RFC-0004-lifecycle-control.md
 
       - name: List RFC files
