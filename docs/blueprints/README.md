@@ -1,3 +1,5 @@
+**Related RFCs:** RFC-0000 (Architectural Principles)
+
 # Blueprints
 
 Blueprints serve as the **Implementation-independent reference architecture** for IntentCore.

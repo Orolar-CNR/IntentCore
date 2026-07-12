@@ -2,8 +2,6 @@ package contracts
 
 import (
 	"context"
-
-	"github.com/Orolar-CNR/IntentCore/core"
 )
 
 // Lifecycle defines the authority for coordinating intent state transitions.
@@ -19,5 +17,5 @@ type Lifecycle interface {
 	// Transition attempts to move an intent to a target state.
 	// Returns core.ErrInvalidTransition if the target state is not allowed from the current state.
 	// Returns core.ErrTerminalState if the current state is already terminal.
-	Transition(ctx context.Context, intent core.IntentID, targetState IntentState) error
+	Transition(ctx context.Context, intent IntentID, targetState IntentState) error
 }
