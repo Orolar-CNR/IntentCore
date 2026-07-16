@@ -7,12 +7,15 @@ import (
 	"github.com/Orolar-CNR/IntentCore/internal/config"
 	"github.com/Orolar-CNR/IntentCore/internal/logger"
 	"github.com/Orolar-CNR/IntentCore/lifecycle"
+	"github.com/Orolar-CNR/IntentCore/proof"
 	"github.com/Orolar-CNR/IntentCore/runtime"
 	"github.com/Orolar-CNR/IntentCore/state"
-	"github.com/Orolar-CNR/IntentCore/transport"
+	"github.com/Orolar-CNR/IntentCore/telemetry"
+	"github.com/Orolar-CNR/IntentCore/transport/abtp"
 )
 
 // New initializes and wires all dependencies for the IntentCore application.
+// This is the Composition Root.
 func New() (*app.App, error) {
 	// 1. Configuration
 	cfg := config.Default()
@@ -32,17 +35,24 @@ func New() (*app.App, error) {
 	// 5. Initialize Admission Evaluator
 	evaluator := admission.NewPolicyEvaluator()
 
-	// 6. Initialize Transport Boundary (Mock for local testing)
-	trans := transport.NewMockTransport([][]byte{})
+	// 6. Initialize Real Transport Boundary (ABTP)
+	// We bind to the default ABTP port. The pipeline only knows it as contracts.Transport.
+	trans := abtp.NewAdapter(abtp.DefaultPort)
 
-	// 7. Initialize Runtime Pipeline
+	// 7. Optional Components
+	telemetryRecorder := telemetry.NewInMemoryRecorder()
+	proofRecorder := proof.NewInMemoryProofRecorder()
+
+	// 8. Initialize Runtime Pipeline with all dependencies
 	pipeline := runtime.NewPipeline(
 		trans,
 		evaluator,
 		machine,
+		runtime.WithTelemetry(telemetryRecorder),
+		runtime.WithProof(proofRecorder),
 	)
 
-	// 8. Create App wrapper
+	// 9. Create App wrapper
 	application := app.New(pipeline, log, cfg)
 
 	return application, nil

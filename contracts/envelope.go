@@ -6,6 +6,12 @@ import (
 	"github.com/Orolar-CNR/IntentCore/core"
 )
 
+// Signature represents an authenticating signature for the envelope.
+type Signature struct {
+	Signature []byte
+	PublicKey []byte
+}
+
 // SemanticEnvelope represents the canonical wire contract.
 //
 // RFC:
@@ -13,14 +19,18 @@ import (
 //	RFC-0001 Section 1 (Canonical Schema)
 //
 // Guarantees:
+//   - Must contain a SchemaVersion
 //   - Must contain a valid UUIDv4 EnvelopeID
 //   - Must contain an AgentIdentity string
+//   - Must contain at least one Signature
 //   - Must contain an ISO8601 EventTimestamp
 //   - Must contain a JSON encoded OpaquePayload
 type SemanticEnvelope struct {
+	SchemaVersion  string
 	EnvelopeID     core.IntentID
 	AgentIdentity  string
 	EventTimestamp time.Time
+	Signatures     []Signature
 	TelemetryClass string
 	OpaquePayload  []byte
 }
