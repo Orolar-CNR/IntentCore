@@ -50,10 +50,12 @@ graph TD
         Snap[(Snapshot Store<br>Periodic checkpoints)]
         Arch[(Archive<br>Cold storage for old ledgers)]
 
-        Repo --- Cache
-        Repo --- Ledger
-        Repo --- Snap
-        Repo --- Arch
+        Repo -->|Reads / Updates| Cache
+        Repo -->|Appends Events| Ledger
+        Cache -->|Periodic Snapshots| Snap
+        Ledger -->|Archives Old Entries| Arch
+        Snap -.->|Recovery Load| Cache
+        Ledger -.->|Recovery Replay| Cache
     end
 
     subgraph Observability
