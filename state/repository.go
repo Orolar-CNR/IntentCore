@@ -11,23 +11,36 @@ import (
 	"github.com/google/uuid"
 )
 
+// SnapshotStoreExtended is an internal interface that extends SnapshotStore with methods needed for repository.go
+type SnapshotStoreExtended interface {
+	contracts.SnapshotStore
+	SaveInternal(ctx context.Context, snapshot any) error
+	LoadLatest(ctx context.Context) (any, error)
+}
+
 // Repository implements contracts.StateRepository.
 // It maintains the single source of truth for the system, enforcing CAS semantics.
 type Repository struct {
 	mu            sync.RWMutex
 	store         map[core.IntentID]*stateEntry
-	snapshotStore contracts.SnapshotStore
+	snapshotStore SnapshotStoreExtended
 }
 
 // NewRepository initializes a new State Repository with an optional SnapshotStore.
 // If none is provided, it defaults to InMemorySnapshotStore.
 func NewRepository(store contracts.SnapshotStore) *Repository {
+	var extendedStore SnapshotStoreExtended
 	if store == nil {
-		store = NewInMemorySnapshotStore()
+		extendedStore = NewInMemorySnapshotStore()
+	} else if ext, ok := store.(SnapshotStoreExtended); ok {
+		extendedStore = ext
+	} else {
+		panic("provided store must implement SnapshotStoreExtended")
 	}
+
 	return &Repository{
 		store:         make(map[core.IntentID]*stateEntry),
-		snapshotStore: store,
+		snapshotStore: extendedStore,
 	}
 }
 
@@ -83,14 +96,15 @@ func (r *Repository) Snapshot(ctx context.Context) (*contracts.Snapshot, error) 
 
 	internalSnap := InternalSnapshot{
 		Header: contracts.Snapshot{
-			SnapshotID:  uuid.New().String(),
+			ID:          uuid.New().String(),
 			Offset:      uint64(time.Now().UnixNano()), // Simplified offset for phase 2
-			IntentCount: int64(len(data)),
+			IntentCount: uint64(len(data)),
+			SnapshotID:  uuid.New().String(), // Keep for backwards compatibility with tests
 		},
 		Data: data,
 	}
 
-	if err := r.snapshotStore.Save(ctx, internalSnap); err != nil {
+	if err := r.snapshotStore.SaveInternal(ctx, internalSnap); err != nil {
 		return nil, err
 	}
 
