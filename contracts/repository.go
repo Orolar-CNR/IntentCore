@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"context"
+	"github.com/Orolar-CNR/IntentCore/core"
 )
 
 // Snapshot represents a checkpoint of the repository state at a specific ledger offset.
@@ -24,11 +25,11 @@ type Snapshot struct {
 //   - Immutable History
 type StateRepository interface {
 	// LoadIntent retrieves the current state and version of an Intent.
-	LoadIntent(ctx context.Context, id IntentID) (*IntentRecord, error)
+	LoadIntent(ctx context.Context, id core.IntentID) (*IntentRecord, error)
 
 	// CompareAndSwap atomically updates the state of an Intent if the expected version matches.
 	// Returns core.ErrVersionConflict if the version does not match.
-	CompareAndSwap(ctx context.Context, expected Version, next IntentRecord) error
+	CompareAndSwap(ctx context.Context, expected core.StateVersion, next IntentRecord) error
 
 	// Snapshot creates a durable checkpoint of the repository state.
 	Snapshot(ctx context.Context) (*Snapshot, error)

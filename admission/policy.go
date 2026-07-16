@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"time"
 
 	"github.com/Orolar-CNR/IntentCore/contracts"
 )
@@ -22,5 +23,14 @@ func NewPolicyEvaluator(policies ...contracts.AdmissionPolicy) *PolicyEvaluator 
 // Evaluate runs the incoming envelope through all registered policies.
 // If any policy rejects, the intent is immediately rejected.
 func (pe *PolicyEvaluator) Evaluate(ctx context.Context, env contracts.SemanticEnvelope) (contracts.AdmissionResult, error) {
-	panic("not implemented: see RFC-0002")
+	// Simple passthrough for Phase 1
+	return contracts.AdmissionResult{
+		Decision: contracts.DecisionAccept,
+		Evidence: contracts.AdmissionEvidence{
+			PolicyID:   "phase1-default-policy",
+			Timestamp:  time.Now().Format(time.RFC3339),
+			VerifierID: "system",
+			Reason:     "Auto-accepted by skeleton pipeline",
+		},
+	}, nil
 }
