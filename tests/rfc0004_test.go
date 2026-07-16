@@ -63,13 +63,13 @@ func TestRFC0004_TransitionMatrix(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected ErrInvalidTransition, got nil")
 	}
-	
+
 	// Test 4: Walk to Executing -> Completed to test terminal states
-	
+
 	machine.Transition(ctx, contracts.TransitionRequest{IntentID: id, FromState: contracts.StateValidated, ToState: contracts.StateAdmitted, ExpectedVersion: 2, ActorID: "a"})
 	machine.Transition(ctx, contracts.TransitionRequest{IntentID: id, FromState: contracts.StateAdmitted, ToState: contracts.StateScheduled, ExpectedVersion: 3, ActorID: "a"})
 	machine.Transition(ctx, contracts.TransitionRequest{IntentID: id, FromState: contracts.StateScheduled, ToState: contracts.StateExecuting, ExpectedVersion: 4, ActorID: "a"})
-	
+
 	req4 := contracts.TransitionRequest{
 		IntentID:        id,
 		FromState:       contracts.StateExecuting,
@@ -95,4 +95,3 @@ func TestRFC0004_TransitionMatrix(t *testing.T) {
 		t.Fatalf("Expected error transitioning from terminal state, got nil")
 	}
 }
-
