@@ -32,7 +32,7 @@ func TestVerticalSlice(t *testing.T) {
 	}
 
 	// 1. Setup DI
-	repo := state.NewRepository()
+	repo := state.NewRepository(nil)
 	ledger := history.NewLedger()
 	recorder := history.NewRecorder(ledger)
 	machine := lifecycle.NewStateMachine(repo, recorder)
