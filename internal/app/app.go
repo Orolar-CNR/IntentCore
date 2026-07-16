@@ -10,6 +10,7 @@ import (
 // Pipeline represents the core execution loop.
 type Pipeline interface {
 	Start(ctx context.Context) error
+	Stop()
 }
 
 // App is the runtime wrapper for IntentCore.
@@ -44,6 +45,7 @@ func (a *App) Run(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		a.logger.Info("Shutdown signal received, gracefully stopping IntentCore...")
+		a.pipeline.Stop()
 		return nil
 	case err := <-errCh:
 		a.logger.Error("Pipeline execution failed", "error", err)

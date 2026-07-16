@@ -18,12 +18,14 @@ import (
 )
 
 func TestVerticalSlice(t *testing.T) {
-	// Prepare test data
+	// Prepare test data conforming to RFC-0002 Admission Rules
 	intentID := core.IntentID(uuid.New())
 	env := contracts.SemanticEnvelope{
+		SchemaVersion:  admission.DefaultSchemaVersion,
 		EnvelopeID:     intentID,
 		AgentIdentity:  "test-agent",
 		EventTimestamp: time.Now(),
+		Signatures:     []contracts.Signature{{Signature: []byte("test-sig")}},
 		OpaquePayload:  []byte(`{"key":"value"}`),
 	}
 	payloadBytes, err := json.Marshal(env)
@@ -42,9 +44,18 @@ func TestVerticalSlice(t *testing.T) {
 
 	// 2. Execute Pipeline
 	ctx := context.Background()
+
+	// Start pipeline (which starts dispatcher worker goroutines)
 	if err := pipeline.Start(ctx); err != nil {
 		t.Fatalf("Pipeline failed: %v", err)
 	}
+
+	// Let the dispatcher worker finish processing before we verify
+	// (a real test might use synchronization, this is just a quick fix for the vertical slice)
+	time.Sleep(100 * time.Millisecond)
+
+	// Shutdown pipeline
+	pipeline.Stop()
 
 	// 3. Verify Repository State
 	record, err := repo.LoadIntent(ctx, intentID)

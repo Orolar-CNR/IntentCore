@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -15,12 +16,12 @@ import (
 type Repository struct {
 	mu            sync.RWMutex
 	store         map[core.IntentID]*stateEntry
-	snapshotStore SnapshotStore
+	snapshotStore contracts.SnapshotStore
 }
 
 // NewRepository initializes a new State Repository with an optional SnapshotStore.
 // If none is provided, it defaults to InMemorySnapshotStore.
-func NewRepository(store SnapshotStore) *Repository {
+func NewRepository(store contracts.SnapshotStore) *Repository {
 	if store == nil {
 		store = NewInMemorySnapshotStore()
 	}
@@ -98,16 +99,14 @@ func (r *Repository) Snapshot(ctx context.Context) (*contracts.Snapshot, error) 
 
 func (r *Repository) Recover(ctx context.Context, snapshot contracts.Snapshot) error {
 	// Re-hydrate state from the snapshot.
-	// We load the full internal snapshot from our store to get the data entries.
-	internalSnap, err := r.snapshotStore.LoadLatest(ctx)
+	loaded, err := r.snapshotStore.LoadLatest(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Verify the snapshot we loaded matches what was requested
-	// (In a real system, you might fetch by ID)
-	if internalSnap.Header.SnapshotID != snapshot.SnapshotID && snapshot.SnapshotID != "" {
-		// Log a warning or handle appropriately
+	internalSnap, ok := loaded.(InternalSnapshot)
+	if !ok {
+		return errors.New("loaded snapshot is not of type InternalSnapshot")
 	}
 
 	r.mu.Lock()
