@@ -21,7 +21,8 @@ func New() (*app.App, error) {
 	log := logger.New(cfg.LogLevel)
 
 	// 3. Initialize In-memory State Repository & History Ledger
-	repo := state.NewRepository()
+	snapshotStore := state.NewInMemorySnapshotStore()
+	repo := state.NewRepository(snapshotStore)
 	ledger := history.NewLedger()
 	recorder := history.NewRecorder(ledger)
 
@@ -31,12 +32,15 @@ func New() (*app.App, error) {
 	// 5. Initialize Admission Evaluator
 	evaluator := admission.NewPolicyEvaluator()
 
-	// 6. Initialize Transport (Mock for Phase 1)
-	// Passing an empty list of payloads just to satisfy the DI.
+	// 6. Initialize Transport Boundary (Mock for local testing)
 	trans := transport.NewMockTransport([][]byte{})
 
 	// 7. Initialize Runtime Pipeline
-	pipeline := runtime.NewPipeline(trans, evaluator, machine)
+	pipeline := runtime.NewPipeline(
+		trans, 
+		evaluator, 
+		machine,
+	)
 
 	// 8. Create App wrapper
 	application := app.New(pipeline, log, cfg)
