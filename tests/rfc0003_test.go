@@ -49,7 +49,7 @@ func TestRFC0003_CAS(t *testing.T) {
 		State:     contracts.StateExecuting,
 		Version:   2,
 	}
-	
+
 	// Intentionally provide the wrong expected version
 	err = repo.CompareAndSwap(ctx, 5, record2)
 	if err == nil {
@@ -62,4 +62,3 @@ func TestRFC0003_CAS(t *testing.T) {
 		t.Fatalf("Expected no error on valid CAS, got %v", err)
 	}
 }
-

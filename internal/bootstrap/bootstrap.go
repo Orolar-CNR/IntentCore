@@ -37,8 +37,8 @@ func New() (*app.App, error) {
 
 	// 7. Initialize Runtime Pipeline
 	pipeline := runtime.NewPipeline(
-		trans, 
-		evaluator, 
+		trans,
+		evaluator,
 		machine,
 	)
 

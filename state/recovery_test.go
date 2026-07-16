@@ -44,7 +44,7 @@ func TestRepository_SnapshotAndRecover(t *testing.T) {
 
 	// Create a new Repository and recover from the snapshot
 	repo2 := state.NewRepository(store)
-	
+
 	err = repo2.Recover(ctx, *header)
 	if err != nil {
 		t.Fatalf("Failed to recover: %v", err)
