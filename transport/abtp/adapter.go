@@ -2,7 +2,6 @@ package abtp
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
 
@@ -36,10 +35,7 @@ func NewAdapter(port int) *Adapter {
 func (a *Adapter) Start(ctx context.Context, handler contracts.EnvelopeHandler) error {
 	a.handler = handler
 
-	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", a.port))
-	if err != nil {
-		return err
-	}
+	addr := &net.UDPAddr{Port: a.port}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
