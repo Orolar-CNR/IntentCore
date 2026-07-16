@@ -1,6 +1,6 @@
 module github.com/Orolar-CNR/IntentCore
 
-go 1.25.0
+go 1.25.10
 
 require (
 	github.com/cilium/ebpf v0.22.0
