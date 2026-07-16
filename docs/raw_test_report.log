@@ -1,0 +1,91 @@
+?   	github.com/Orolar-CNR/IntentCore/admission	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/cmd/intentcored	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/contracts	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/core	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/history	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/internal/app	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/internal/bootstrap	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/internal/config	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/internal/logger	[no test files]
+?   	github.com/Orolar-CNR/IntentCore/lifecycle	[no test files]
+=== RUN   TestInMemoryProofRecorder
+--- PASS: TestInMemoryProofRecorder (0.00s)
+PASS
+ok  	github.com/Orolar-CNR/IntentCore/proof	(cached)
+=== RUN   TestDispatcher
+--- PASS: TestDispatcher (0.00s)
+=== RUN   TestPipelineProof
+--- PASS: TestPipelineProof (0.00s)
+=== RUN   TestPipelineTelemetry
+--- PASS: TestPipelineTelemetry (0.00s)
+=== RUN   TestPipelineTelemetryReject
+--- PASS: TestPipelineTelemetryReject (0.00s)
+=== RUN   TestVerticalSlice
+--- PASS: TestVerticalSlice (0.10s)
+=== RUN   TestPipelineTimeoutAndCancellation
+--- PASS: TestPipelineTimeoutAndCancellation (0.20s)
+PASS
+ok  	github.com/Orolar-CNR/IntentCore/runtime	(cached)
+=== RUN   TestRepository_SnapshotAndRecover
+--- PASS: TestRepository_SnapshotAndRecover (0.00s)
+PASS
+ok  	github.com/Orolar-CNR/IntentCore/state	(cached)
+=== RUN   TestInMemoryRecorder
+--- PASS: TestInMemoryRecorder (0.00s)
+PASS
+ok  	github.com/Orolar-CNR/IntentCore/telemetry	(cached)
+=== RUN   TestRFC0002DeterministicPolicies
+=== RUN   TestRFC0002DeterministicPolicies/Valid_Envelope
+=== RUN   TestRFC0002DeterministicPolicies/Invalid_Schema_Version
+=== RUN   TestRFC0002DeterministicPolicies/Missing_IntentID
+=== RUN   TestRFC0002DeterministicPolicies/Missing_AgentIdentity
+=== RUN   TestRFC0002DeterministicPolicies/Missing_Signature
+=== RUN   TestRFC0002DeterministicPolicies/Missing_Payload
+=== RUN   TestRFC0002DeterministicPolicies/Missing_Timestamp
+--- PASS: TestRFC0002DeterministicPolicies (0.00s)
+    --- PASS: TestRFC0002DeterministicPolicies/Valid_Envelope (0.00s)
+    --- PASS: TestRFC0002DeterministicPolicies/Invalid_Schema_Version (0.00s)
+    --- PASS: TestRFC0002DeterministicPolicies/Missing_IntentID (0.00s)
+    --- PASS: TestRFC0002DeterministicPolicies/Missing_AgentIdentity (0.00s)
+    --- PASS: TestRFC0002DeterministicPolicies/Missing_Signature (0.00s)
+    --- PASS: TestRFC0002DeterministicPolicies/Missing_Payload (0.00s)
+    --- PASS: TestRFC0002DeterministicPolicies/Missing_Timestamp (0.00s)
+=== RUN   TestRFC0003_CAS
+--- PASS: TestRFC0003_CAS (0.00s)
+=== RUN   TestRFC0004_TransitionMatrix
+--- PASS: TestRFC0004_TransitionMatrix (0.00s)
+PASS
+ok  	github.com/Orolar-CNR/IntentCore/tests	(cached)
+?   	github.com/Orolar-CNR/IntentCore/transport	[no test files]
+=== RUN   TestLoader_Attach_InterfaceByNameError
+=== PAUSE TestLoader_Attach_InterfaceByNameError
+=== RUN   TestLoader_Attach_LoadObjectsError
+=== PAUSE TestLoader_Attach_LoadObjectsError
+=== RUN   TestLoader_Attach_AttachXDPError
+=== PAUSE TestLoader_Attach_AttachXDPError
+=== RUN   TestLoader_Attach_Success
+=== PAUSE TestLoader_Attach_Success
+=== RUN   TestLoader_Detach_Success
+=== PAUSE TestLoader_Detach_Success
+=== RUN   TestLoader_Detach_LinkCloseError
+=== PAUSE TestLoader_Detach_LinkCloseError
+=== RUN   TestLoader_Detach_ObjsCloseError
+=== PAUSE TestLoader_Detach_ObjsCloseError
+=== RUN   TestAdapter
+--- PASS: TestAdapter (0.00s)
+=== CONT  TestLoader_Detach_Success
+=== CONT  TestLoader_Attach_Success
+--- PASS: TestLoader_Detach_Success (0.00s)
+=== CONT  TestLoader_Attach_InterfaceByNameError
+--- PASS: TestLoader_Attach_Success (0.00s)
+=== CONT  TestLoader_Detach_ObjsCloseError
+=== CONT  TestLoader_Attach_AttachXDPError
+--- PASS: TestLoader_Attach_InterfaceByNameError (0.00s)
+--- PASS: TestLoader_Detach_ObjsCloseError (0.00s)
+=== CONT  TestLoader_Attach_LoadObjectsError
+=== CONT  TestLoader_Detach_LinkCloseError
+--- PASS: TestLoader_Attach_AttachXDPError (0.00s)
+--- PASS: TestLoader_Attach_LoadObjectsError (0.00s)
+--- PASS: TestLoader_Detach_LinkCloseError (0.00s)
+PASS
+ok  	github.com/Orolar-CNR/IntentCore/transport/abtp	1.025s
