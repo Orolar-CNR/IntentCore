@@ -62,4 +62,3 @@ func TestRFC0003_CAS(t *testing.T) {
 		t.Fatalf("Expected no error on valid CAS, got %v", err)
 	}
 }
-
