@@ -103,7 +103,7 @@ func (p *DefaultPipeline) Execute(ctx context.Context, rawPayload []byte) error 
 		if result.Decision == contracts.DecisionReject {
 			// Deterministic policy rejection is terminal, no retry
 			if p.telemetry != nil {
-				p.telemetry.Record(execCtx, contracts.TelemetryEvent{
+				_ = p.telemetry.Record(execCtx, contracts.TelemetryEvent{
 					IntentID:  uuid.UUID(env.EnvelopeID).String(),
 					EventType: "Admission_Rejected",
 					Timestamp: time.Now(),
@@ -114,14 +114,14 @@ func (p *DefaultPipeline) Execute(ctx context.Context, rawPayload []byte) error 
 		}
 
 		if p.proof != nil {
-			p.proof.RecordProof(execCtx, contracts.Proof{
+			_ = p.proof.RecordProof(execCtx, contracts.Proof{
 				IntentID: uuid.UUID(env.EnvelopeID).String(),
 				ProofID:  "proof-" + uuid.UUID(env.EnvelopeID).String(),
 			})
 		}
 
 		if p.telemetry != nil {
-			p.telemetry.Record(execCtx, contracts.TelemetryEvent{
+			_ = p.telemetry.Record(execCtx, contracts.TelemetryEvent{
 				IntentID:  uuid.UUID(env.EnvelopeID).String(),
 				EventType: "Admission_Accepted",
 				Timestamp: time.Now(),
