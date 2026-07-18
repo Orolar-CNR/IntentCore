@@ -221,13 +221,25 @@ Admission
         ▼
 Lifecycle
         │
+        ├────────────► History
+        │
+        ├────────────► Telemetry
+        │
+        ├────────────► Proof
+        │
         ▼
 Repository
         │
-        ▼
-History
-Proof
-Telemetry
+        ├────────► State Store
+        │               │
+        │               ├────► State Cache
+        │               │
+        │               └────► Snapshot Store
+        │
+        └────────► Ledger
+                        │
+                        ▼
+                    Archive
 ```
 
 Pipeline execution MUST always remain unidirectional.

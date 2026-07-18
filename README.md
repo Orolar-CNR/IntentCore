@@ -45,21 +45,23 @@ graph TD
 
     subgraph State Repository Structure
         Repo[Repository]
+        StateStore[State Store]
         Cache[(State Cache<br>In-Memory / Fast Access)]
-        Ledger[(Ledger<br>Append-only Immutable Log)]
         Snap[(Snapshot Store<br>Periodic checkpoints)]
+        Ledger[(Ledger<br>Append-only Immutable Log)]
         Arch[(Archive<br>Cold storage for old ledgers)]
 
-        Repo -->|Reads / Updates| Cache
+        Repo -->|Delegates to| StateStore
         Repo -->|Appends Events| Ledger
-        Cache -->|Periodic Snapshots| Snap
+        StateStore -->|Reads / Updates| Cache
+        StateStore -->|Schedules| Snap
         Ledger -->|Archives Old Entries| Arch
-        Snap -.->|Recovery Load| Cache
-        Ledger -.->|Recovery Replay| Cache
     end
 
     subgraph Observability
-        HPT[History / Proof / Telemetry]
+        Hist[History]
+        Proof[Proof]
+        Tele[Telemetry]
     end
 
     Ext --> ABTP
@@ -68,6 +70,12 @@ graph TD
     Val --> Norm
     Norm --> Adm
     Adm --> Life
+    Life -->|Generates| Hist
+    Life -->|Generates| Proof
+    Life -->|Generates| Tele
     Life -- "CAS mutations" --> Repo
-    Repo --> HPT
+
+    %% Recovery paths
+    Snap -.->|Recovery Load| StateStore
+    Ledger -.->|Recovery Replay| StateStore
 ```
