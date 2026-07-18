@@ -14,13 +14,13 @@
 
 This document defines the canonical architecture of IntentCore.
 
-It establishes the normative architectural contracts, system boundaries, dependency rules, and execution model that every implementation MUST follow.
+It establishes the normative architectural contracts, execution model, dependency rules, and system boundaries that every implementation SHALL preserve.
 
-Unless explicitly stated otherwise, the terminology defined in RFC 2119 applies throughout this specification.
+Unless explicitly stated otherwise, the terminology defined in RFC 2119 applies throughout this document.
 
-This document is normative.
+Implementation details MAY evolve.
 
-Implementation details MAY evolve over time, but the architectural contracts defined herein MUST remain stable.
+Architectural contracts MUST remain stable.
 
 ---
 
@@ -31,13 +31,15 @@ IntentCore is NOT:
 - a message broker
 - a workflow engine
 - a transport protocol
+- a service mesh
 - a network framework
 
-IntentCore SHALL operate exclusively as an **Intent Coordination Kernel**.
+IntentCore SHALL operate exclusively as an Intent Coordination Kernel.
 
 Its responsibilities are limited to:
 
-- intent validation
+- validation
+- normalization
 - admission governance
 - deterministic lifecycle control
 - authoritative state transitions
@@ -46,31 +48,31 @@ Its responsibilities are limited to:
 - proof generation
 - telemetry production
 
-Everything outside these responsibilities belongs to outer architectural layers.
+Everything else belongs to outer architectural layers.
 
 ---
 
 # 3. Architectural Constitution (Normative Invariants)
 
-The following invariants define the supreme architectural rules of IntentCore.
-
-Every package, module, RFC, ADR, implementation, and future extension MUST comply with these rules.
+Every implementation SHALL preserve the following invariants.
 
 ## 3.1 Intent Authority
 
-Every authoritative state mutation MUST originate from a fully validated and admitted Intent.
+Every authoritative state mutation MUST originate from a validated and admitted Intent.
 
-No component MAY mutate repository state directly.
+Repository state MUST NOT be modified directly.
+
+Only Lifecycle MAY request authoritative mutations.
 
 ---
 
 ## 3.2 Transport Independence
 
-IntentCore MUST remain completely independent from transport implementations.
+IntentCore MUST remain transport agnostic.
 
-Transport technologies MAY evolve without requiring any modification to kernel contracts.
+Transport implementations MAY evolve independently.
 
-Examples include (but are not limited to):
+Examples include:
 
 - ABTP
 - TCP
@@ -88,9 +90,9 @@ Transport implementations MUST remain stateless.
 
 Transport MUST NOT perform:
 
-- lifecycle decisions
-- admission decisions
-- repository mutations
+- lifecycle evaluation
+- admission
+- repository mutation
 - policy evaluation
 - business logic
 
@@ -102,7 +104,7 @@ Transport exists solely to deliver SemanticEnvelope objects into the kernel.
 
 Repository SHALL be the only authoritative state storage.
 
-Every state mutation MUST execute through Compare-And-Swap (CAS).
+Every mutation MUST execute through Compare-And-Swap (CAS).
 
 No alternative mutation path is permitted.
 
@@ -110,9 +112,9 @@ No alternative mutation path is permitted.
 
 ## 3.5 Immutable History
 
-Every successful state transition MUST generate immutable evidence.
+Every successful lifecycle transition MUST emit immutable historical evidence.
 
-Historical records MUST be append-only.
+History SHALL be append-only.
 
 Historical records MUST NOT be modified.
 
@@ -122,40 +124,36 @@ Historical records MUST NOT be deleted.
 
 ## 3.6 Strict Dependency Direction
 
-Execution dependencies MUST always move toward the kernel.
+Execution dependencies SHALL always move toward the kernel.
 
-Outer layers SHALL NOT bypass intermediate stages.
+Cross-layer mutation is forbidden.
 
-Cross-layer mutation is strictly forbidden.
+Outer layers MUST NOT bypass intermediate stages.
 
 ---
 
 # 4. System Boundaries
 
-IntentCore is intentionally divided into explicit architectural boundaries.
-
 ## IntentCore
-
-The coordination kernel.
 
 Responsible for:
 
-- validation
-- normalization
-- admission
-- lifecycle
-- repository
-- history
-- proof
-- telemetry
+- Validation
+- Normalization
+- Admission
+- Lifecycle
+- Repository
+- History
+- Proof
+- Telemetry
 
 ---
 
 ## ABTP
 
-The transport boundary.
+Transport boundary only.
 
-Responsible only for:
+Responsible for:
 
 - framing
 - serialization
@@ -172,33 +170,29 @@ ABTP is NOT part of the kernel.
 
 SemanticEnvelope is the canonical wire contract.
 
-Every external system MUST communicate with IntentCore using SemanticEnvelope.
-
-Transport implementations MAY vary.
-
-SemanticEnvelope MUST remain stable.
+Every external producer MUST communicate using SemanticEnvelope.
 
 ---
 
 ## Repository
 
-Repository is the Single Source of Truth.
-
-Only Lifecycle is permitted to request authoritative state mutations.
+Repository is the authoritative state boundary.
 
 Repository guarantees:
 
-- Compare-And-Swap
+- Compare-And-Swap (CAS)
 - version consistency
+- authoritative state storage
 - snapshot support
 - recovery support
-- immutable persistence
+
+Repository does NOT generate History, Proof, or Telemetry.
+
+Those artifacts originate from Lifecycle.
 
 ---
 
-# 5. Architectural Execution Pipeline
-
-IntentCore enforces a strict one-way execution model.
+# 5. Canonical Execution Pipeline
 
 ```
 External Systems
@@ -220,41 +214,30 @@ Admission
         │
         ▼
 Lifecycle
-        │
-        ├────────────► History
-        │
-        ├────────────► Telemetry
-        │
-        ├────────────► Proof
-        │
-        ▼
+   ├──────────────► History
+   ├──────────────► Proof
+   ├──────────────► Telemetry
+   │
+   ▼
 Repository
-        │
-        ├────────► State Store
-        │               │
-        │               ├────► State Cache
-        │               │
-        │               └────► Snapshot Store
-        │
-        └────────► Ledger
-                        │
-                        ▼
-                    Archive
+   ├──────────────► State Store
+   │                    │
+   │                    ├────────► State Cache
+   │                    └────────► Snapshot Store
+   │
+   └──────────────► Ledger
+                           │
+                           ▼
+                        Archive
 ```
 
-Pipeline execution MUST always remain unidirectional.
+Execution MUST remain strictly one-way.
 
-No stage MAY skip another stage.
-
-No outer layer MAY directly mutate an inner layer.
+No stage MAY bypass another stage.
 
 ---
 
 # 6. Deterministic Lifecycle
-
-IntentCore defines a deterministic lifecycle for every admitted Intent.
-
-`StateUnknown` exists solely as an uninitialized sentinel.
 
 Operational lifecycle begins at `Pending`.
 
@@ -280,69 +263,48 @@ Completed Failed
      RolledBack
 ```
 
-Every transition MUST satisfy:
+Every transition MUST be:
 
 - deterministic
 - authorized
 - atomic
 - auditable
 
-Transition rules are defined by RFC-0004.
+RFC-0004 defines the transition matrix.
 
 ---
 
 # 7. Canonical Repository Layout
 
-The repository SHALL expose architectural boundaries directly through its package layout.
-
 ```text
 IntentCore/
 │
 ├── cmd/
-│   └── intentcored/
-│
+├── contracts/
 ├── core/
-├── lifecycle/
 ├── admission/
+├── lifecycle/
+├── runtime/
 ├── state/
 ├── history/
 ├── proof/
 ├── telemetry/
-├── runtime/
-│
 ├── transport/
-│   ├── transport.go
-│   ├── wire/
-│   ├── abtp/
-│   └── internal/
-│
-├── docs/
-│   ├── adr/
-│   ├── rfcs/
-│   └── architecture-landscape.md
-│
-├── go.mod
-└── README.md
+├── internal/
+└── docs/
 ```
-
-This layout represents the canonical repository structure.
 
 ---
 
 # 8. RFC Mapping
 
-IntentCore architecture is governed by the following RFCs.
-
 | RFC | Responsibility |
 |------|----------------|
-| RFC-0001 | Transport & Wire Contract |
-| RFC-0002 | Admission Interface |
-| RFC-0003 | Repository & State Topology |
-| RFC-0004 | Lifecycle Control |
-
-These RFCs define frozen architectural contracts.
-
-Implementations MUST conform to them.
+| RFC-0001 | Semantic Envelope |
+| RFC-0002 | Admission |
+| RFC-0003 | Repository |
+| RFC-0004 | Lifecycle |
+| RFC-0005 | Event Bus Contract (Draft) |
 
 ---
 
@@ -350,85 +312,65 @@ Implementations MUST conform to them.
 
 IntentCore SHALL NOT become:
 
-- a generic message broker
-- a workflow orchestration engine
-- an execution runtime
-- a transport implementation
-- a service mesh
-- an API gateway
-
-These responsibilities belong to external systems.
+- Message Broker
+- Workflow Engine
+- API Gateway
+- Service Mesh
+- Transport Stack
+- Business Runtime
 
 ---
 
 # 10. Implementation Philosophy
 
-IntentCore follows Specification-Driven Development.
-
-Architectural order SHALL always be:
+Specification-Driven Development
 
 ```
 Architecture
-
-↓
-
+    ↓
 ADR
-
-↓
-
+    ↓
 RFC
-
-↓
-
-Interfaces
-
-↓
-
+    ↓
+Contracts
+    ↓
 Implementation
-
-↓
-
+    ↓
 Testing
 ```
 
-Implementation MUST follow specifications.
+Implementation SHALL follow specifications.
 
-Specifications MUST NOT be derived from implementation.
+Specifications SHALL NOT be derived from implementation.
 
 ---
 
-# 11. Informative Appendix (Non-Normative)
-
-The following information is provided for implementation planning only.
-
-It does not define architectural contracts.
+# 11. Informative Roadmap
 
 ## Phase 1
 
-- Core
-- Lifecycle
-- Repository
-- Transport Boundary
+Foundation
 
 ## Phase 2
 
-- Runtime Pipeline
-- Telemetry
-- Proof
+Runnable Kernel
 
 ## Phase 3
 
+Transformation
+
+- Federation
 - Distributed Coordination
 - Semantic Routing
-- Agent Discovery
-- Federation
+- Stability Foundation
 
 ## Phase 4
 
-- Knowledge Plane
+Knowledge Plane
+
 - Intent Graph
+- Zero-Trust
 - Global Coordination
-- Zero-Trust Infrastructure
 
 ---
 
@@ -436,16 +378,14 @@ It does not define architectural contracts.
 
 IntentCore is the architectural center of the system.
 
-ABTP is the transport boundary.
-
-SemanticEnvelope is the canonical wire contract.
-
 Lifecycle is the sole authority for state transitions.
 
-Repository is the single source of truth.
+Repository is the authoritative state store.
 
 History is immutable.
 
-Architecture is specification-driven.
+Proof and Telemetry are emitted by Lifecycle.
+
+ABTP remains outside the kernel boundary.
 
 Every implementation SHALL preserve these architectural contracts.
