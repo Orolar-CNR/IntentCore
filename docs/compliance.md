@@ -8,7 +8,7 @@ IntentCore has completed Phase 2 and reached a frozen baseline state. The curren
 
 The system currently enforces a strict one-way flow:
 
-**ABTP → SemanticEnvelope → Validation → Normalization → Admission → Dispatcher → Lifecycle → CAS-backed State Repository → History**
+**ABTP → SemanticEnvelope → Validation → Normalization → Admission → Dispatcher → Lifecycle → Repository (CAS), with History / Proof / Telemetry emitted by Lifecycle**
 
 ### Verification Summary
 

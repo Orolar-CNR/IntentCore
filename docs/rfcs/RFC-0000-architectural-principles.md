@@ -17,7 +17,7 @@ IntentCore is a specification-driven system.
 
 ### 2.3 Strict One-Way Dependency
 The system MUST enforce a strictly unidirectional pipeline for data flow and dependency management.
-* The pipeline MUST flow sequentially: External Systems -> ABTP -> SemanticEnvelope -> Validation -> Normalization -> Admission -> Lifecycle -> Repository -> History / Proof / Telemetry.
+* The pipeline MUST flow sequentially: External Systems -> ABTP -> SemanticEnvelope -> Validation -> Normalization -> Admission -> Lifecycle -> Repository (CAS), while History / Proof / Telemetry are emitted by Lifecycle.
 * Components in one layer MUST NOT import or depend on packages or structures from layers deeper in the pipeline (e.g., `contracts` MUST NOT depend on `core` implementation details).
 * Cyclic dependencies are strictly prohibited.
 

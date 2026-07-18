@@ -22,7 +22,8 @@ Distributed coordination requires an authoritative source of state. If multiple 
 ## Architectural Context
 
 The Repository is the bottom-most layer of the core pipeline. It is only accessible by the Lifecycle component for mutations.
-`Lifecycle → Repository → History`
+`Lifecycle → Repository`
+Note: History is generated as a result of Lifecycle transitions, not as a direct output of the Repository itself.
 
 ## Normative Specification
 
