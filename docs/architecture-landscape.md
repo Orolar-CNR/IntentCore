@@ -2,20 +2,79 @@
 
 IntentCore is a specification-driven intent coordination kernel, with AetherBus as its transport protocol, designed to enforce deterministic lifecycle control, admission governance, and state consistency for distributed autonomous systems.
 
+## Architecture at a Glance
+
+```text
+External Systems
+        │
+        ▼
++-------------------------+
+|      AetherBus          |
+|  Transport / Protocol   |
++-------------------------+
+            │
+            ▼
++-------------------------+
+|      IntentCore         |
+| Coordination Kernel     |
++-------------------------+
+│
+├── Validation
+├── Normalization
+├── Admission
+├── Lifecycle
+├── State
+├── History
+├── Proof
+└── Telemetry
+```
+
+AetherBus carries messages from external systems into IntentCore. IntentCore owns coordination, lifecycle, state, history, proof, and telemetry responsibilities.
+
 ## 1. Architecture Boundaries
 
 IntentCore is no longer a message broker in the traditional sense. It is the coordination kernel that governs intent lifecycle, state mutation, authority, and proof-oriented coordination.
 
-| Component | Responsibility |
-| --- | --- |
-| Repository / Project: IntentCore | Core kernel for lifecycle, state, admission, and coordination |
-| Transport / Wire Protocol: AetherBus | Low-level transport that carries `SemanticEnvelope` into the kernel |
-| Messaging / Wire Format: AetherBus Protocol | Canonical frame/envelope format and metadata contract |
-| Architecture Family: IntentCore Architecture | Full architectural envelope governing structure, flow, and development rules |
+```text
+IntentCore Architecture
+│
+├── IntentCore
+│   ├── Lifecycle
+│   ├── Admission
+│   ├── State Repository
+│   ├── Authority
+│   ├── Coordination
+│   └── Proof / History
+│
+└── AetherBus
+    ├── Transport
+    ├── Wire Protocol
+    ├── SemanticEnvelope
+    └── Network Framing
+```
+
+| Component | Responsibility | Architectural identity |
+| --- | --- | --- |
+| Repository / Project: IntentCore | Core kernel for lifecycle, state, admission, and coordination | Kernel |
+| Transport / Wire Protocol: AetherBus | Low-level transport that carries `SemanticEnvelope` into the kernel | Transport layer |
+| Messaging / Wire Format: SemanticEnvelope | Canonical envelope format and metadata contract carried by AetherBus | Wire format |
+| RFC | Frozen or approved implementation contract | Locked standard |
+| Architecture Family: IntentCore Architecture | Full architectural envelope governing structure, flow, and development rules | System architecture |
+
+This split keeps IntentCore and AetherBus from overlapping responsibilities: IntentCore is the kernel at the center of the system, while AetherBus is only the transport boundary that delivers semantic messages to it.
 
 ## 2. Core Contracts
 
-The architectural contracts below are frozen or approved and form the stable foundation of the system.
+The architectural contracts below are frozen or approved and form the stable foundation of the system. The canonical RFC mapping is:
+
+| RFC | Scope | Kernel responsibility |
+| --- | --- | --- |
+| RFC-0001 | Transport / Wire Protocol | Carries `SemanticEnvelope` into the kernel through AetherBus |
+| RFC-0002 | Admission | Defines the admission interface and decision boundary |
+| RFC-0003 | State Repository | Defines the single source of truth and repository mutation primitives |
+| RFC-0004 | Lifecycle | Defines lifecycle states, transitions, authority, and history |
+
+Runtime command and execution-level contracts are not core RFCs in this kernel layer. Those concerns belong above IntentCore in runtime or execution components.
 
 ### ADR-0001 — Broker Internal Architecture
 
@@ -127,13 +186,44 @@ Pending:
 The system obeys a one-way pipeline only:
 
 ```text
+                Applications
+                     │
+           AI Agents / Runtime
+                     │
+             AetherBus Protocol
+                     │
+              SemanticEnvelope
+                     │
+────────────────────────────────────
+              IntentCore
+────────────────────────────────────
+ Validation
+     │
+ Normalization
+     │
+ Admission
+     │
+ Lifecycle
+     │
+ State Repository
+     │
+ History
+     │
+ Proof
+     │
+ Telemetry
+```
+
+In pipeline form:
+
+```text
 SemanticEnvelope
-  → Transport
+  → AetherBus Transport
   → Validation
   → Normalization
   → Admission
-  → StateMachine
-  → Repository (CAS)
+  → Lifecycle / StateMachine
+  → State Repository (CAS)
   → History
   → Proof
   → Telemetry
@@ -156,15 +246,54 @@ IntentCore is built on the following principles:
 
 ## 6. Historical Context
 
-The system originally lived under the AetherBus name, where the transport and message-routing idea first took shape. As the architecture matured, the project was re-centered around the actual responsibility of the kernel: intent coordination, lifecycle control, and state governance.
+The system originally lived under the AetherBus name, where the transport and message-routing idea first took shape. Early documents used AetherBus as a project name, bus, broker, platform, and protocol name at the same time. As the architecture matured, the project was re-centered around the actual responsibility of the kernel: intent coordination, lifecycle control, and state governance.
+
+The rebrand from AetherBus-Tachyon to IntentCore is therefore not only a rename. It is a change in architectural identity:
+
+| Earlier framing | Current framing |
+| --- | --- |
+| AetherBus = bus, transport, broker, platform | IntentCore = coordination kernel |
+| AetherBus also described the protocol | AetherBus = transport protocol |
+| Message routing was the apparent center | Intent lifecycle and state governance are the center |
 
 For this reason:
 
 - IntentCore is now the repository and architecture name.
-- AetherBus remains the transport / wire protocol name.
+- AetherBus remains the transport protocol name.
+- SemanticEnvelope is the wire format carried by AetherBus.
+- RFC documents are the locked contracts for implementation behavior.
 - Legacy references to broker-centric framing are historical only.
 
-## 7. Current State Summary
+This naming model follows separation of concerns and supports the specification-driven architecture model used across ADRs, RFCs, and package boundaries.
+
+## 7. Target Package Structure
+
+The long-term repository shape should make the separation visible in the filesystem:
+
+```text
+IntentCore/
+│
+├── core/
+├── lifecycle/
+├── admission/
+├── state/
+├── proof/
+├── history/
+├── telemetry/
+├── runtime/
+├── transport/
+│   └── aetherbus/
+│
+├── docs/
+│   ├── adr/
+│   └── rfc/
+│
+└── README.md
+```
+
+In this structure, AetherBus is an implementation of the transport layer inside IntentCore. It is not the architectural center of the system.
+
+## 8. Current State Summary
 
 The project is now structurally stable.
 
@@ -175,6 +304,6 @@ The project is now structurally stable.
 - Development model: specification-driven
 - Next phase: finish `state/`, then build `runtime/pipeline`
 
-## 8. One-line Definition
+## 9. One-line Definition
 
 IntentCore is a frozen-contract intent coordination kernel with AetherBus transport, deterministic lifecycle control, strict admission governance, and repository-backed state consistency for distributed autonomous systems.
