@@ -1,6 +1,6 @@
 # RFC-0002 — Admission Boundary
 
-**Status:** Locked
+**Status:** Locked (Addendum Draft Merged)
 **Category:** Architecture Specification
 **Version:** 1.0
 **Last Updated:** 2026-07-11
@@ -40,6 +40,21 @@ The Admission layer SHALL NEVER mutate Intent state or repository state. Its sol
 
 ### 4. Rejection
 If any stage in the Admission Pipeline fails, the Intent MUST be rejected immediately. The system MUST NOT attempt partial evaluation or fallback authorization mechanisms.
+
+### 5. Duplication Checking (Scope-Limited)
+#### MUST
+*   Admission MUST validate the structural presence and well-formedness of `intent_id` and `expected_version` on every incoming SemanticEnvelope.
+*   Admission MUST check `intent_id` against previously-admitted Intents to detect duplication/replay, and MUST reject or no-op an Intent whose `intent_id` has already been admitted and committed, per the Repository`'`s authoritative record.
+*   Admission MUST evaluate duplication and structural validity only. Admission MUST NOT perform version-conflict evaluation (i.e., MUST NOT compare `expected_version` against the Repository`'`s current authoritative version).
+
+#### MUST NOT
+*   Admission MUST NOT query Repository for current state version as part of its evaluation. No read path from Admission to Repository is introduced by this addendum; the existing System Architecture Diagram (Admission → Lifecycle → Repository) is unchanged.
+*   Admission MUST NOT possess any knowledge of, or evaluate, transport-layer identifiers such as the Event Bus `idempotency_key` (RFC-0005).
+
+### 6. Clarification: Where Conflict Detection Occurs
+#### MUST
+*   Actual CAS conflict detection (comparing `expected_version` to the Repository`'`s current version) occurs exclusively at the point where Lifecycle issues the mutation request to Repository (RFC-0003, RFC-0004). A version mismatch at that stage MUST result in the transition being rejected (e.g., routed to Failed/RolledBack per the Lifecycle FSM), not silently retried by Admission.
+*   This division of labor MUST be preserved: Admission = duplication/structural gate; Lifecycle+Repository = authoritative conflict resolution via CAS.
 
 ## State Model
 

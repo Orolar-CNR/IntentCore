@@ -1,10 +1,13 @@
 package contracts
 
-import "context"
+import (
+	"context"
+)
 
-// SnapshotStore defines the abstraction for saving and loading snapshots.
-// This allows swapping between Memory, File, BoltDB, or S3.
+// SnapshotStore defines persistence for repository snapshots.
 type SnapshotStore interface {
-	Save(ctx context.Context, snapshot any) error
-	LoadLatest(ctx context.Context) (any, error)
+	Save(ctx context.Context, snapshot *Snapshot) error
+	Load(ctx context.Context, id string) (*Snapshot, error)
+	List(ctx context.Context) ([]Snapshot, error)
+	Delete(ctx context.Context, id string) error
 }

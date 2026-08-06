@@ -3,14 +3,20 @@ package contracts
 import (
 	"context"
 	"github.com/Orolar-CNR/IntentCore/core"
+	"time"
 )
 
 // Snapshot represents a checkpoint of the repository state at a specific ledger offset.
 type Snapshot struct {
-	SnapshotID  string
-	Offset      uint64
-	IntentCount int64
-	// In a real implementation, this would contain a stream or reference to the blob data.
+	ID            string
+	SchemaVersion core.StateVersion
+	CreatedAt     time.Time
+	Checkpoint    string
+	IntentCount   uint64
+	Payload       []byte
+
+	SnapshotID string // Deprecated, use ID
+	Offset     uint64
 }
 
 // StateRepository defines the canonical state persistence contract.
