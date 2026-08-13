@@ -1,6 +1,6 @@
 # RFC-0001 — Semantic Envelope
 
-**Status:** Locked
+**Status:** Locked (Addendum Draft Merged)
 **Category:** Architecture Specification
 **Version:** 1.0
 **Last Updated:** 2026-07-11
@@ -34,6 +34,8 @@ The `SemanticEnvelope` MUST contain the following fields:
 *   `event_timestamp`: A string formatted as ISO 8601. REQUIRED. Used for logical ordering.
 *   `telemetry_class`: A string. OPTIONAL.
 *   `opaque_payload`: A JSON-encoded payload. REQUIRED.
+*   `intent_id`: A stable, globally unique identity for the Intent. REQUIRED. Used for duplication / replay detection.
+*   `expected_version`: The version of the target state the Intent was authored against. REQUIRED. Used for CAS conflict detection.
 
 ### 2. Validation
 Upon receiving a `SemanticEnvelope`, the Validation layer MUST evaluate the structural integrity of the payload.
@@ -46,6 +48,19 @@ Upon receiving a `SemanticEnvelope`, the Validation layer MUST evaluate the stru
 Normalization is a canonicalization step.
 *   The Normalization step MAY canonicalize field ordering and default values for optional metadata.
 *   The Normalization step MUST NOT alter the payload meaning or rewrite intent semantics.
+
+### 4. Kernel Identity and Mutation Fields
+#### MUST
+The SemanticEnvelope MUST include the following two kernel-owned fields, both present simultaneously. Neither substitutes for the other, as they guard against distinct failure modes:
+*   `intent_id` — a stable, globally unique identity for the Intent. Used for duplication / replay detection.
+*   `expected_version` — the version of the target state the Intent was authored against. Used for CAS conflict detection at Repository commit time.
+
+`mutation_key` is explicitly not part of the SemanticEnvelope contract. Only `intent_id` and `expected_version` serve these roles.
+
+The SemanticEnvelope MUST remain strictly decoupled from any event-plane or transport-specific envelope (e.g., the EventEnvelope defined in RFC-0005). If an Intent arrives wrapped inside an EventEnvelope (e.g., via bus delivery or DLQ replay), the transport/adapter boundary MUST unwrap or re-materialize it into a standalone SemanticEnvelope, carrying `intent_id` and `expected_version`, before it reaches Admission. Admission MUST NOT receive or inspect EventEnvelope fields directly.
+
+#### MUST NOT
+*   `idempotency_key` (an Event Bus / RFC-0005 concept) MUST NOT appear in, nor be conflated with, the SemanticEnvelope`'`s `intent_id`.
 
 ## State Model
 

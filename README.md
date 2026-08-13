@@ -2,6 +2,7 @@
 
 A language-agnostic intent coordination kernel that provides deterministic lifecycle management, state consistency, policy enforcement, and proof-oriented coordination for distributed autonomous systems.
 
+IntentCore uses AetherBus as its transport layer while keeping validation, normalization, admission, lifecycle control, state mutation, history, proof, and telemetry inside the kernel.
 IntentCore uses ABTP (AetherBus Transport Protocol) as its transport boundary while keeping validation, normalization, admission, lifecycle control, state mutation, history, proof, and telemetry inside the kernel.
 
 ## Architectural Identity
@@ -11,6 +12,11 @@ The project is intentionally split into four stable names:
 | Name | Architectural role |
 | --- | --- |
 | IntentCore | Kernel and center of system coordination |
+| AetherBus | Transport layer and protocol boundary |
+| SemanticEnvelope | Wire format carried by AetherBus |
+| RFC | Locked contract for stable implementation behavior |
+
+This naming model prevents the early-project ambiguity where AetherBus could mean the project, the broker, the transport, or the protocol. IntentCore is now the coordination kernel; AetherBus is the transport protocol that carries semantic messages into it.
 | ABTP | Transport boundary and protocol layer |
 | SemanticEnvelope | Wire format carried by ABTP |
 | RFC | Locked contract for stable implementation behavior |
@@ -45,21 +51,23 @@ graph TD
 
     subgraph State Repository Structure
         Repo[Repository]
+        StateStore[State Store]
         Cache[(State Cache<br>In-Memory / Fast Access)]
-        Ledger[(Ledger<br>Append-only Immutable Log)]
         Snap[(Snapshot Store<br>Periodic checkpoints)]
+        Ledger[(Ledger<br>Append-only Immutable Log)]
         Arch[(Archive<br>Cold storage for old ledgers)]
 
-        Repo -->|Reads / Updates| Cache
+        Repo -->|Delegates to| StateStore
         Repo -->|Appends Events| Ledger
-        Cache -->|Periodic Snapshots| Snap
+        StateStore -->|Reads / Updates| Cache
+        StateStore -->|Schedules| Snap
         Ledger -->|Archives Old Entries| Arch
-        Snap -.->|Recovery Load| Cache
-        Ledger -.->|Recovery Replay| Cache
     end
 
     subgraph Observability
-        HPT[History / Proof / Telemetry]
+        Hist[History]
+        Proof[Proof]
+        Tele[Telemetry]
     end
 
     Ext --> ABTP
@@ -68,6 +76,12 @@ graph TD
     Val --> Norm
     Norm --> Adm
     Adm --> Life
+    Life -->|Generates| Hist
+    Life -->|Generates| Proof
+    Life -->|Generates| Tele
     Life -- "CAS mutations" --> Repo
-    Repo --> HPT
+
+    %% Recovery paths
+    Snap -.->|Recovery Load| StateStore
+    Ledger -.->|Recovery Replay| StateStore
 ```
