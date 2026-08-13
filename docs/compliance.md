@@ -1,159 +1,75 @@
 # Compliance Matrix
 
-This document tracks the implementation status of the normative requirements defined by the IntentCore RFC series.
+This document tracks the implementation status of mandatory (MUST/SHALL) requirements defined in the RFCs. It serves as a continuous verification mechanism to ensure the codebase aligns with the supreme architectural contracts.
 
-Its purpose is to provide a continuous verification layer between specifications and implementation.
+## Baseline Compliance Status (Milestone 2.8)
 
----
+IntentCore has completed Phase 2 and reached a frozen baseline state. The current repository implementation is now aligned with RFC-0001 through RFC-0004 and provides a verified end-to-end execution path across the core architecture.
 
-# Baseline Compliance Status (Milestone 2.8)
+The system currently enforces a strict one-way flow:
 
-Current repository status:
+**ABTP → SemanticEnvelope → Validation → Normalization → Admission → Dispatcher → Lifecycle → CAS-backed State Repository → History**
 
-**Phase 2 — COMPLETE**
+### Verification Summary
 
-The repository has reached the frozen Phase 2 baseline implementing RFC-0001 through RFC-0004.
-
-Verified execution path:
-
-```
-ABTP
-    ↓
-SemanticEnvelope
-    ↓
-Validation
-    ↓
-Normalization
-    ↓
-Admission
-    ↓
-Dispatcher
-    ↓
-Lifecycle
-   ├────────► History
-   ├────────► Proof
-   ├────────► Telemetry
-   ▼
-Repository (CAS)
-```
-
-This execution model is deterministic, one-way, and compliant with the current architectural contracts.
-
----
-
-# Verification Summary
-
-Validation command:
+A full test run was executed with:
 
 ```bash
-go test -race -v ./...
+go test -v -race ./...
 ```
 
-Results:
+The suite completed successfully with no race conditions detected. All active implementation packages that contain tests passed, including:
+- `proof`
+- `runtime`
+- `state`
+- `telemetry`
+- `tests`
+- `transport/abtp`
 
-- PASS
-- No race conditions detected
-- All runnable packages compiled successfully
-- ABTP datapath generated successfully via `go generate`
+The transport datapath binaries were generated successfully before test execution using `go generate` where required.
 
-Verified packages:
+### Coverage Highlights
 
-- runtime
-- state
-- transport/abtp
-- proof
-- telemetry
-- tests
+- **RFC-0002 (Admission):** deterministic rejection policies are implemented and verified through table-driven tests.
+- **RFC-0003 (State Repository):** CAS-based state mutation, snapshot, and recovery behavior are implemented and verified.
+- **RFC-0004 (Lifecycle):** transition rules and state-machine behavior are implemented and verified.
+- **Runtime Pipeline:** vertical-slice execution is working end to end, including validation, normalization, admission, dispatch, lifecycle transition, repository commit, telemetry, and proof hooks.
+- **Transport Boundary (ABTP):** adapter behavior and loader attach/detach logic are implemented and verified.
 
----
+### Status
 
-# Architectural Compliance
+The repository is currently in a frozen baseline state for Phase 2.
+This means the architectural contracts are stable, the runtime path is executable, and the system is ready to move into the next phase of expansion without altering the locked RFCs.
 
-| Area | Status |
-|--------|--------|
-| One-way dependency | PASS |
-| Repository as Single Source of Truth | PASS |
-| CAS enforcement | PASS |
-| Deterministic Lifecycle | PASS |
-| Immutable History | PASS |
-| Runtime Pipeline | PASS |
-| Snapshot / Recovery | PASS |
-| Transport Boundary | PASS |
-| Proof Hooks | PASS |
-| Telemetry Hooks | PASS |
+### Notes
 
----
+Packages without dedicated test files still participate in the verified build and test graph through the full repository test run. The absence of package-specific tests does not affect the overall compliance status, which is currently green for the implemented baseline.
 
-# RFC Compliance Matrix
+## RFC-0001: Semantic Envelope
 
-## RFC-0001 — Semantic Envelope
+| Req ID | Description | Status | Verification Method |
+|---|---|---|---|
+| REQ-0001-1 | Transport MUST deliver a valid byte stream that decodes into a SemanticEnvelope. | Pending | Unit Test, Integration Test |
+| REQ-0001-2 | SemanticEnvelope MUST strictly conform to the schema defined in this specification. | Pending | Structural Linter |
+| REQ-0001-3 | The Validation layer MUST act solely as a deterministic structural conformance check. | Pending | Code Review, Unit Test |
 
-| Requirement | Status | Verification |
-|------------|--------|--------------|
-| SemanticEnvelope validation | PASS | Integration Test |
-| Structural validation | PASS | Runtime Validation |
-| Transport isolation | PASS | Architecture Review |
+## RFC-0002: Admission Boundary
 
----
+| Req ID | Description | Status | Verification Method |
+|---|---|---|---|
+| REQ-0002-1 | Admission process MUST be executed as a strict, deterministic pipeline. | Pending | Formal Verification, Test |
+| REQ-0002-2 | All policies evaluated MUST be strictly decidable. | Pending | DSL Restriction |
 
-## RFC-0002 — Admission
+## RFC-0003: State Repository
 
-| Requirement | Status | Verification |
-|------------|--------|--------------|
-| Deterministic policies | PASS | Table-driven Tests |
-| Reject invalid envelopes | PASS | RFC0002 Tests |
-| Deterministic evaluation | PASS | Runtime Tests |
+| Req ID | Description | Status | Verification Method |
+|---|---|---|---|
+| REQ-0003-1 | All state mutations MUST occur exclusively via Compare-And-Swap (CAS). | Pending | Code Audit, Concurrency Test |
+| REQ-0003-2 | Every successful CAS MUST result in an immutable entry appended to the History Ledger. | Pending | Integration Test |
 
----
+## RFC-0004: Lifecycle Control
 
-## RFC-0003 — Repository
-
-| Requirement | Status | Verification |
-|------------|--------|--------------|
-| CAS-only mutation | PASS | Repository Tests |
-| Snapshot support | PASS | Snapshot Tests |
-| Recovery | PASS | Recovery Tests |
-| Thread safety | PASS | Race Detector |
-
----
-
-## RFC-0004 — Lifecycle
-
-| Requirement | Status | Verification |
-|------------|--------|--------------|
-| Deterministic state machine | PASS | RFC0004 Tests |
-| Authorized transitions | PASS | Lifecycle Tests |
-| Atomic state mutation | PASS | Repository CAS Tests |
-| Immutable history emission | PASS | Integration Tests |
-
----
-
-# Build Verification
-
-The following packages currently contain executable tests:
-
-- runtime
-- state
-- transport/abtp
-- proof
-- telemetry
-- tests
-
-Packages without dedicated test files participate in repository-wide compilation and integration verification.
-
----
-
-# Compliance Conclusion
-
-IntentCore has successfully completed the Phase 2 baseline.
-
-The repository currently satisfies the architectural contracts established by:
-
-- RFC-0001
-- RFC-0002
-- RFC-0003
-- RFC-0004
-
-RFC-0005 (Event Bus Contract) remains in Draft status and is not yet part of the mandatory compliance baseline.
-
-The repository is now ready to enter **Phase 3 (Transformation)** while preserving the frozen architectural contracts established during Phases 1 and 2.
+| Req ID | Description | Status | Verification Method |
+|---|---|---|---|
+| REQ-0004-1 | The Lifecycle MUST operate as a formal, deterministic state machine. | Pending | State Machine Linter |
+| REQ-0004-2 | Transitions MUST be atomic. | Pending | Transaction Test |

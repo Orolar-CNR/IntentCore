@@ -25,13 +25,19 @@ jobs:
 
       - name: Check required docs exist
         run: |
-          test -f README.md
-          test -f docs/architecture-landscape.md
-          test -f docs/rfcs/RFC-0000-architectural-principles.md
-          test -f docs/rfcs/RFC-0001-semantic-envelope.md
-          test -f docs/rfcs/RFC-0002-admission-boundary.md
-          test -f docs/rfcs/RFC-0003-state-repository.md
-          test -f docs/rfcs/RFC-0004-lifecycle-control.md
+          # Use ls first for debugging if anything goes wrong
+          ls -la
+          ls -la docs/
+          ls -la docs/rfcs/ || true
+
+          # We use explicit checks so that bash's -e doesn't terminate prematurely and silently
+          test -f README.md || (echo "README.md missing" && /bin/false)
+          test -f docs/architecture-landscape.md || (echo "docs/architecture-landscape.md missing" && /bin/false)
+          test -f docs/rfcs/RFC-0000-architectural-principles.md || (echo "docs/rfcs/RFC-0000-architectural-principles.md missing" && /bin/false)
+          test -f docs/rfcs/RFC-0001-semantic-envelope.md || (echo "docs/rfcs/RFC-0001-semantic-envelope.md missing" && /bin/false)
+          test -f docs/rfcs/RFC-0002-admission-boundary.md || (echo "docs/rfcs/RFC-0002-admission-boundary.md missing" && /bin/false)
+          test -f docs/rfcs/RFC-0003-state-repository.md || (echo "docs/rfcs/RFC-0003-state-repository.md missing" && /bin/false)
+          test -f docs/rfcs/RFC-0004-lifecycle-control.md || (echo "docs/rfcs/RFC-0004-lifecycle-control.md missing" && /bin/false)
 
       - name: List RFC files
         run: |
