@@ -2,8 +2,9 @@ package contracts
 
 import (
 	"context"
-	"github.com/Orolar-CNR/IntentCore/core"
 	"time"
+
+	"github.com/Orolar-CNR/IntentCore/core"
 )
 
 // Snapshot represents a checkpoint of the repository state at a specific ledger offset.
@@ -14,6 +15,13 @@ type Snapshot struct {
 	Checkpoint    string
 	IntentCount   uint64
 	Payload       []byte
+
+	// Checksum is the hex-encoded SHA-256 digest of the snapshot's state
+	// data at the time it was created by Repository.Snapshot. Recover
+	// MUST recompute this digest from the loaded data and reject the
+	// snapshot on mismatch, to detect tampering or corruption of
+	// snapshots at rest (SnapshotStore / ArchiveStore).
+	Checksum string
 
 	SnapshotID string // Deprecated, use ID
 	Offset     uint64
