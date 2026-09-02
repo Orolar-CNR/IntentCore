@@ -11,36 +11,36 @@ import (
 	"github.com/google/uuid"
 )
 
-// SnapshotStoreExtended is an internal interface that extends SnapshotStore with methods needed for repository.go
 type SnapshotStoreExtended interface {
 	contracts.SnapshotStore
 	SaveInternal(ctx context.Context, snapshot any) error
 	LoadLatest(ctx context.Context) (any, error)
+
+	// LoadInternal returns the full InternalSnapshot for a specific
+	// snapshot ID, or (nil, nil) if it does not exist. This lets Recover
+	// restore an explicitly requested snapshot instead of always the
+	// most recent one.
+	LoadInternal(ctx context.Context, id string) (any, error)
 }
 
 // Repository implements contracts.StateRepository.
-// It maintains the single source of truth for the system, enforcing CAS semantics.
 type Repository struct {
 	mu            sync.RWMutex
-	store         map[core.IntentID]*stateEntry
 	snapshotStore SnapshotStoreExtended
+	data          map[uuid.UUID]*stateEntry
 }
 
-// NewRepository initializes a new State Repository with an optional SnapshotStore.
-// If none is provided, it defaults to InMemorySnapshotStore.
 func NewRepository(store contracts.SnapshotStore) *Repository {
-	var extendedStore SnapshotStoreExtended
 	if store == nil {
-		extendedStore = NewInMemorySnapshotStore()
-	} else if ext, ok := store.(SnapshotStoreExtended); ok {
-		extendedStore = ext
-	} else {
-		panic("provided store must implement SnapshotStoreExtended")
+		store = NewInMemorySnapshotStore()
 	}
-
+	ext, ok := store.(SnapshotStoreExtended)
+	if !ok {
+		panic("provided SnapshotStore does not implement SnapshotStoreExtended")
+	}
 	return &Repository{
-		store:         make(map[core.IntentID]*stateEntry),
-		snapshotStore: extendedStore,
+		snapshotStore: ext,
+		data:          make(map[uuid.UUID]*stateEntry),
 	}
 }
 
@@ -48,36 +48,44 @@ func (r *Repository) LoadIntent(ctx context.Context, id core.IntentID) (*contrac
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	entry, exists := r.store[id]
-	if !exists {
+	uid := uuid.UUID(id)
+	entry, ok := r.data[uid]
+	if !ok {
 		return nil, core.ErrNotFound
 	}
 
 	return entry.toRecord(), nil
 }
 
-func (r *Repository) CompareAndSwap(ctx context.Context, expected core.StateVersion, next contracts.IntentRecord) error {
+func (r *Repository) CompareAndSwap(ctx context.Context, expected core.StateVersion, record contracts.IntentRecord) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	entry, exists := r.store[next.ID]
-	var currentVersion core.StateVersion = 0
-	if exists {
-		currentVersion = entry.Version
+	// Validate revision invariant: record.Version must strictly equal expected + 1
+	if record.Version != expected+1 {
+		return core.ErrVersionConflict
 	}
 
-	if err := EvaluateCAS(expected, currentVersion); err != nil {
-		return err
+	uid := uuid.UUID(record.ID)
+	current, exists := r.data[uid]
+
+	if !exists {
+		if expected != 0 {
+			return core.ErrVersionConflict
+		}
+	} else {
+		if current.Version != expected {
+			return core.ErrVersionConflict
+		}
 	}
 
-	// Update or insert the new entry
-	r.store[next.ID] = &stateEntry{
-		ID:        next.ID,
-		Agent:     next.Agent,
-		Timestamp: next.Timestamp,
-		Payload:   next.Payload,
-		State:     next.State,
-		Version:   next.Version, // Should be expected + 1, managed by lifecycle
+	r.data[uid] = &stateEntry{
+		ID:        uid,
+		Agent:     record.Agent,
+		State:     record.State,
+		Version:   record.Version,
+		Timestamp: record.Timestamp,
+		Payload:   record.Payload,
 	}
 
 	return nil
@@ -88,18 +96,24 @@ func (r *Repository) Snapshot(ctx context.Context) (*contracts.Snapshot, error) 
 	defer r.mu.RUnlock()
 
 	data := make(map[string]*stateEntry)
-	for k, v := range r.store {
-		// deep copy the entry to prevent mutations
+	for k, v := range r.data {
 		clone := *v
 		data[uuid.UUID(k).String()] = &clone
 	}
 
+	checksum, err := computeChecksum(data)
+	if err != nil {
+		return nil, err
+	}
+
+	snapID := uuid.New().String()
 	internalSnap := InternalSnapshot{
 		Header: contracts.Snapshot{
-			ID:          uuid.New().String(),
+			ID:          snapID,
 			Offset:      uint64(time.Now().UnixNano()), // Simplified offset for phase 2
 			IntentCount: uint64(len(data)),
-			SnapshotID:  uuid.New().String(), // Keep for backwards compatibility with tests
+			Checksum:    checksum,
+			SnapshotID:  snapID, // Keep for backwards compatibility with tests
 		},
 		Data: data,
 	}
@@ -108,14 +122,27 @@ func (r *Repository) Snapshot(ctx context.Context) (*contracts.Snapshot, error) 
 		return nil, err
 	}
 
-	return &internalSnap.Header, nil
+	headerCopy := internalSnap.Header
+	return &headerCopy, nil
 }
 
 func (r *Repository) Recover(ctx context.Context, snapshot contracts.Snapshot) error {
-	// Re-hydrate state from the snapshot.
-	loaded, err := r.snapshotStore.LoadLatest(ctx)
+	// Re-hydrate state from the requested snapshot. If a specific ID was
+	// given, honor it exactly instead of silently substituting whatever
+	// happens to be "latest" in the store. Callers that genuinely want
+	// the latest snapshot pass a zero-value contracts.Snapshot{}.
+	var loaded any
+	var err error
+	if snapshot.ID != "" {
+		loaded, err = r.snapshotStore.LoadInternal(ctx, snapshot.ID)
+	} else {
+		loaded, err = r.snapshotStore.LoadLatest(ctx)
+	}
 	if err != nil {
 		return err
+	}
+	if loaded == nil {
+		return core.ErrSnapshotNotFound
 	}
 
 	internalSnap, ok := loaded.(InternalSnapshot)
@@ -123,20 +150,32 @@ func (r *Repository) Recover(ctx context.Context, snapshot contracts.Snapshot) e
 		return errors.New("loaded snapshot is not of type InternalSnapshot")
 	}
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.store = make(map[core.IntentID]*stateEntry)
-	for k, v := range internalSnap.Data {
-		parsedUUID, err := uuid.Parse(k)
-		if err == nil {
-			r.store[core.IntentID(parsedUUID)] = v
+	// Verify integrity before accepting any of this snapshot's data into
+	// the live repository. A snapshot saved before this check existed
+	// will have an empty Checksum and is allowed through unverified;
+	// any snapshot that does carry a Checksum must match exactly.
+	if internalSnap.Header.Checksum != "" {
+		checksum, err := computeChecksum(internalSnap.Data)
+		if err != nil {
+			return err
+		}
+		if checksum != internalSnap.Header.Checksum {
+			return core.ErrSnapshotChecksumMismatch
 		}
 	}
 
-	// In a real system, we would then replay the ledger from `snapshot.Offset`
-	// Since History Recorder is out of scope for the Repository contract directly,
-	// the App/Runtime bootstrap phase coordinates Ledger replay *after* calling Recover.
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.data = make(map[uuid.UUID]*stateEntry)
+	for k, v := range internalSnap.Data {
+		id, err := uuid.Parse(k)
+		if err != nil {
+			return err
+		}
+		clone := *v
+		r.data[id] = &clone
+	}
 
 	return nil
 }
